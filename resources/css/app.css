@@ -2,8 +2,31 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../../resources/views/**/*.blade.php';
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Le Miting brand colors — warm, earthy, kampung-inspired */
+    --color-brand-50: #fdf8f0;
+    --color-brand-100: #f9edda;
+    --color-brand-200: #f2d7b0;
+    --color-brand-300: #e9bc7d;
+    --color-brand-400: #e09c48;
+    --color-brand-500: #d98526;
+    --color-brand-600: #c46b1c;
+    --color-brand-700: #a35019;
+    --color-brand-800: #85401c;
+    --color-brand-900: #6e351a;
+    --color-brand-950: #3b1a0b;
+
+    --color-primary: #c46b1c;
+    --color-primary-dark: #a35019;
+    --color-accent: #2d5016;
+    --color-accent-light: #4a7c28;
+    --color-surface: #fdf8f0;
+    --color-surface-dark: #f5ebe0;
+    --color-text: #1a1208;
+    --color-text-muted: #6b5d4f;
 }

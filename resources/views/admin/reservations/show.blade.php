@@ -1,0 +1,159 @@
+@extends('admin.layouts.app', ['title' => 'Reservation '.$reservation->reservation_number])
+
+@section('content')
+    <div class="mb-6">
+        <a href="{{ route('admin.reservations.index') }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800">← Back to reservations</a>
+    </div>
+
+    @if (session('status'))
+        <p class="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-800" role="status">{{ session('status') }}</p>
+    @endif
+
+    @if (session('error'))
+        <p class="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 font-medium" role="alert">{{ session('error') }}</p>
+    @endif
+
+    @error('table_id')
+        <p class="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 font-medium" role="alert">{{ $message }}</p>
+    @enderror
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section class="rounded-xl border border-brand-100 bg-white p-6 shadow-sm lg:col-span-2" aria-labelledby="reservation-details-heading">
+            <h2 id="reservation-details-heading" class="text-lg font-semibold text-text">Guest and reservation details</h2>
+
+            <dl class="mt-4 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                <div>
+                    <dt class="font-medium text-text-muted">Customer</dt>
+                    <dd class="mt-1 text-text">{{ $reservation->customer_name }}</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-text-muted">Email</dt>
+                    <dd class="mt-1 text-text">{{ $reservation->customer_email }}</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-text-muted">Phone</dt>
+                    <dd class="mt-1 text-text">{{ $reservation->customer_phone }}</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-text-muted">Reservation type</dt>
+                    <dd class="mt-1 text-text">{{ str_replace('_', ' ', ucfirst($reservation->reservation_type)) }}</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-text-muted">Date &amp; time</dt>
+                    <dd class="mt-1 text-text">{{ $reservation->reservation_date->format('d M Y') }} · {{ $reservation->reservation_time }}</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-text-muted">Guests</dt>
+                    <dd class="mt-1 text-text">{{ $reservation->guest_count }}</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-text-muted">Assigned table</dt>
+                    <dd class="mt-1 text-text">Table {{ $reservation->table->table_number }} (seats {{ $reservation->table->capacity }})</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-text-muted">Notes</dt>
+                    <dd class="mt-1 text-text">{{ $reservation->special_request ?: '—' }}</dd>
+                </div>
+            </dl>
+
+            @if ($reservation->reservationFoods->isNotEmpty())
+                <h3 class="mt-8 text-base font-semibold text-text">Pre-ordered food</h3>
+                <ul class="mt-3 divide-y divide-brand-100 rounded-lg border border-brand-100">
+                    @foreach ($reservation->reservationFoods as $food)
+                        <li class="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                            <span class="text-text">{{ $food->quantity }} × {{ $food->item_name }}</span>
+                            <span class="shrink-0 font-medium text-text">RM {{ number_format((float) ($food->unit_price * $food->quantity), 2) }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="mt-4 flex justify-between border-t border-brand-100 pt-4">
+                    <span class="font-semibold text-text">Food total</span>
+                    <span class="font-bold text-primary">RM {{ number_format((float) $reservation->total, 2) }}</span>
+                </div>
+            @else
+                <p class="mt-8 text-sm text-text-muted">No food pre-ordered for this reservation.</p>
+            @endif
+        </section>
+
+        <aside class="space-y-6">
+            <section class="rounded-xl border border-brand-100 bg-white p-6 shadow-sm" aria-labelledby="reservation-status-heading">
+                <h2 id="reservation-status-heading" class="text-lg font-semibold text-text">Status</h2>
+
+                <div class="mt-4 space-y-3">
+                    <div>
+                        <p class="text-sm font-medium text-text-muted">Reservation status</p>
+                        <p class="mt-1">
+                            <span class="inline-block rounded-full px-3 py-1 text-sm font-semibold {{ $reservation->status === 'cancelled' ? 'bg-red-50 text-red-700' : ($reservation->status === 'completed' ? 'bg-green-50 text-green-800' : ($reservation->status === 'confirmed' ? 'bg-emerald-50 text-emerald-800' : 'bg-brand-100 text-brand-800')) }}">{{ ucfirst($reservation->status) }}</span>
+                        </p>
+                    </div>
+
+                    @if ($reservation->payment)
+                        <div>
+                            <p class="text-sm font-medium text-text-muted">Payment status</p>
+                            <p class="mt-1">
+                                <span class="inline-block rounded-full px-3 py-1 text-sm font-semibold {{ $reservation->payment->status === 'paid' ? 'bg-green-50 text-green-800' : ($reservation->payment->status === 'failed' ? 'bg-red-50 text-red-700' : 'bg-brand-100 text-brand-800') }}">{{ ucfirst($reservation->payment->status) }}</span>
+                            </p>
+                            <p class="mt-1 text-xs text-text-muted">Payment status is managed by the payment gateway and is read-only here.</p>
+                        </div>
+                    @endif
+                </div>
+
+                @if (! empty($nextStatuses))
+                    <form method="POST" action="{{ route('admin.reservations.update-status', $reservation) }}" class="mt-5 space-y-3">
+                        @csrf
+                        @method('PATCH')
+                        <label for="status" class="block text-sm font-medium text-text">Move reservation to</label>
+                        <div class="flex gap-2">
+                            <select id="status" name="status" class="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text">
+                                @foreach ($nextStatuses as $transitionStatus)
+                                    <option value="{{ $transitionStatus }}">{{ ucfirst($transitionStatus) }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">Update</button>
+                        </div>
+                    </form>
+                @else
+                    <p class="mt-5 rounded-md bg-brand-50 px-4 py-3 text-sm text-brand-800">
+                        This reservation is {{ $reservation->status }} and has no further status changes.
+                    </p>
+                @endif
+            </section>
+
+            @if (in_array($reservation->status, ['pending', 'confirmed'], true))
+                <section class="rounded-xl border border-brand-100 bg-white p-6 shadow-sm" aria-labelledby="reassign-heading">
+                    <h2 id="reassign-heading" class="text-lg font-semibold text-text">Reassign table</h2>
+
+                    @if ($availableTables->isEmpty())
+                        <p class="mt-3 rounded-md bg-brand-50 px-4 py-3 text-sm text-brand-800">
+                            No other available tables can seat {{ $reservation->guest_count }} guests at {{ $reservation->reservation_time }}.
+                        </p>
+                    @else
+                        <form method="POST" action="{{ route('admin.reservations.update-table', $reservation) }}" class="mt-3 space-y-3">
+                            @csrf
+                            @method('PATCH')
+                            <label for="table_id" class="block text-sm font-medium text-text">Move to</label>
+                            <div class="flex gap-2">
+                                <select id="table_id" name="table_id" class="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text">
+                                    @foreach ($availableTables as $table)
+                                        <option value="{{ $table->id }}">Table {{ $table->table_number }} (seats {{ $table->capacity }})</option>
+                                    @endforeach
+                                </select>
+                                <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">Assign</button>
+                            </div>
+                        </form>
+                    @endif
+                </section>
+            @endif
+
+            @if ($reservation->feedback)
+                <section class="rounded-xl border border-brand-100 bg-white p-6 shadow-sm" aria-labelledby="feedback-heading">
+                    <h2 id="feedback-heading" class="text-lg font-semibold text-text">Guest feedback</h2>
+                    <p class="mt-2 text-sm text-text-muted">Food {{ $reservation->feedback->food_rating }}/5 · Service {{ $reservation->feedback->service_rating }}/5 · Experience {{ $reservation->feedback->experience_rating }}/5</p>
+                    @if ($reservation->feedback->comment)
+                        <p class="mt-2 text-sm text-text">“{{ $reservation->feedback->comment }}”</p>
+                    @endif
+                </section>
+            @endif
+        </aside>
+    </div>
+@endsection
