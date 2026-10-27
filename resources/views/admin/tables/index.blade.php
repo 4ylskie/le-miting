@@ -3,7 +3,7 @@
 @section('content')
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-text-muted">Manage tables and their maintenance state.</p>
-        <a href="{{ route('admin.tables.create') }}" class="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
+        <a href="{{ route('admin.tables.create') }}" class="lm-admin-target rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
             Add table
         </a>
     </div>
@@ -21,11 +21,11 @@
             <table class="min-w-full divide-y divide-brand-100 text-sm">
                 <thead class="bg-brand-50">
                     <tr>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Table</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Capacity</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Status</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Upcoming reservations</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text"></th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Table</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Capacity</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Status</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Protected commitments</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-brand-100">
@@ -36,9 +36,14 @@
                             <td class="whitespace-nowrap px-5 py-3">
                                 <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium {{ $table->status === 'maintenance' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800' }}">{{ ucfirst($table->status) }}</span>
                             </td>
-                            <td class="whitespace-nowrap px-5 py-3 text-text">{{ $table->upcoming_count }}</td>
+                            <td class="whitespace-nowrap px-5 py-3 text-text">
+                                <span>{{ $table->protected_count }}</span>
+                                @foreach ($table->protection_summary as $reason => $count)
+                                    <p class="text-sm text-text-muted">{{ $reason }}: {{ $count }}</p>
+                                @endforeach
+                            </td>
                             <td class="whitespace-nowrap px-5 py-3 text-right">
-                                <a href="{{ route('admin.tables.edit', $table) }}" class="font-semibold text-brand-700 hover:text-brand-800">Edit →</a>
+                                <a href="{{ route('admin.tables.edit', $table) }}" class="font-semibold text-brand-700 hover:text-brand-800">Edit <span class="sr-only">table {{ $table->table_number }}</span> →</a>
                             </td>
                         </tr>
                     @endforeach

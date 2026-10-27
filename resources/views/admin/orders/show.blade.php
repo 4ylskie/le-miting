@@ -1,11 +1,16 @@
 @extends('admin.layouts.app', ['title' => 'Order '.$order->order_number])
+@inject('businessTime', 'App\Services\BusinessTime')
 
 @section('content')
     <div class="mb-6">
-        <a href="{{ route('admin.orders.index') }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800">← Back to orders</a>
+        <a href="{{ route('admin.orders.index') }}" class="lm-admin-target text-sm font-semibold text-brand-700 hover:text-brand-800">← Back to orders</a>
     </div>
 
     @error('status')
+        <p id="order-status-error" class="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 font-medium" role="alert">{{ $message }}</p>
+    @enderror
+
+    @error('expected_status')
         <p class="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 font-medium" role="alert">{{ $message }}</p>
     @enderror
 
@@ -36,11 +41,11 @@
                 </div>
                 <div>
                     <dt class="font-medium text-text-muted">Order type</dt>
-                    <dd class="mt-1 capitalize text-text">{{ str_replace('-', ' ', $order->order_type) }}</dd>
+                    <dd class="mt-1 text-text">{{ ucfirst($order->order_type) }}</dd>
                 </div>
                 <div>
                     <dt class="font-medium text-text-muted">Placed</dt>
-                    <dd class="mt-1 text-text">{{ $order->created_at->format('d M Y, g:i A') }}</dd>
+                    <dd class="mt-1 text-text">{{ $businessTime->local($order->created_at)->format('d M Y, g:i A') }} MYT</dd>
                 </div>
                 <div>
                     <dt class="font-medium text-text-muted">Notes</dt>
@@ -91,11 +96,12 @@
                     <form method="POST" action="{{ route('admin.orders.update-status', $order) }}" class="mt-5 space-y-3">
                         @csrf
                         @method('PATCH')
+                        <input type="hidden" name="expected_status" value="{{ $order->status }}">
                         <label for="status" class="block text-sm font-medium text-text">Move order to</label>
                         <div class="flex gap-2">
-                            <select id="status" name="status" class="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text">
+                            <select id="status" name="status" class="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text" @if ($errors->has('status')) aria-invalid="true" aria-describedby="order-status-error" @endif>
                                 @foreach ($nextStatuses as $transitionStatus)
-                                    <option value="{{ $transitionStatus }}">{{ ucfirst($transitionStatus) }}</option>
+                                    <option value="{{ $transitionStatus }}" @selected(old('status') === $transitionStatus)>{{ ucfirst($transitionStatus) }}</option>
                                 @endforeach
                             </select>
                             <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">Update</button>
@@ -107,16 +113,6 @@
                     </p>
                 @endif
             </section>
-
-            @if ($order->feedback)
-                <section class="rounded-xl border border-brand-100 bg-white p-6 shadow-sm" aria-labelledby="feedback-heading">
-                    <h2 id="feedback-heading" class="text-lg font-semibold text-text">Guest feedback</h2>
-                    <p class="mt-2 text-sm text-text-muted">Food {{ $order->feedback->food_rating }}/5 · Service {{ $order->feedback->service_rating }}/5 · Experience {{ $order->feedback->experience_rating }}/5</p>
-                    @if ($order->feedback->comment)
-                        <p class="mt-2 text-sm text-text">“{{ $order->feedback->comment }}”</p>
-                    @endif
-                </section>
-            @endif
         </aside>
     </div>
 @endsection

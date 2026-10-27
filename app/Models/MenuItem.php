@@ -54,4 +54,9 @@ class MenuItem extends Model
     {
         return $this->hasMany(ReservationFood::class);
     }
+
+    public function allergenAssessments(): HasMany
+    {
+        return $this->hasMany(MenuItemAllergenAssessment::class);
+    }
 }

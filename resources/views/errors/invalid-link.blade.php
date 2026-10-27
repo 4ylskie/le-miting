@@ -3,18 +3,16 @@
 @section('title', 'Link Invalid — Le Miting')
 
 @section('content')
-    <section class="py-24" aria-label="Invalid link">
-        <div class="mx-auto max-w-xl px-4 sm:px-6 lg:px-8 text-center">
-            <h1 class="text-2xl font-bold text-brand-800">This link is no longer valid.</h1>
-            <p class="mt-3 text-text-muted">
-                If you reached this page from an email, the link may have expired.
-            </p>
-            <a
-                href="{{ route('home') }}"
-                class="mt-8 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-                Back to Home
-            </a>
+    <section class="lm-section lm-section--compact" aria-labelledby="invalid-link-heading">
+        <div class="lm-container">
+            <div class="lm-stack mx-auto max-w-2xl">
+                <p class="lm-status self-start" data-state="error" role="alert">Link unavailable</p>
+                <h1 id="invalid-link-heading" class="lm-h1">This link is no longer valid.</h1>
+                <p class="lm-body lm-muted">The link is invalid or has expired. If you reached this page from an email, check that you used the complete link.</p>
+                <div class="lm-actions">
+                    <a href="{{ route('home') }}" class="lm-button">Back to Home</a>
+                </div>
+            </div>
         </div>
     </section>
 @endsection

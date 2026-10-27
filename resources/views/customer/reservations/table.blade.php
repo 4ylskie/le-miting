@@ -1,335 +1,228 @@
 @extends('layouts.master')
+@inject('businessTime', 'App\Services\BusinessTime')
+@php
+    $businessNow = $businessTime->now();
+@endphp
 
-@section('title', $type === 'table_and_food' ? 'Reserve Table + Food — Le Miting' : 'Reserve Table Only — Le Miting')
+@section('title', $type === 'table_and_food' ? 'Reservation + Pre-Order — Le Miting' : 'Reservation Only — Le Miting')
 
 @section('content')
-    <section class="bg-brand-950 text-white py-14" aria-label="Reservation details">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold md:text-4xl">
-                {{ $type === 'table_and_food' ? 'Reserve Table + Pre-order Food' : 'Reserve Table Only' }}
-            </h1>
-            <p class="mt-3 max-w-2xl text-brand-100">
-                {{ $type === 'table_and_food'
-                    ? 'Pick a time, choose an available table, and pre-order your food. Payment is required to confirm.'
-                    : 'Pick a date and time, choose an available table, and confirm. No payment required.' }}
-            </p>
-        </div>
-    </section>
+    <section class="lm-section lm-section--compact" aria-labelledby="reservation-heading">
+        <div class="lm-container">
+            <div class="lm-stack mx-auto max-w-4xl">
+                <header class="lm-stack">
+                    <a href="{{ route('reservation.create') }}" class="lm-button lm-button--quiet self-start">Reservation options</a>
+                    <p class="lm-eyebrow">{{ $type === 'table_and_food' ? 'Level 2' : 'Level 1' }}</p>
+                    <h1 id="reservation-heading" class="lm-h1">{{ $type === 'table_and_food' ? 'Reservation + Pre-Order' : 'Reservation Only' }}</h1>
+                    <p class="lm-body lm-muted max-w-prose">
+                        {{ $type === 'table_and_food'
+                            ? 'Choose a time, table and dishes. Payment for your food is required before your reservation is confirmed.'
+                            : 'Choose a date, time and available table. No food pre-order or payment is required.' }}
+                    </p>
+                </header>
 
-    <section class="py-12" aria-label="Reservation form">
-        <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-            @if (session('success'))
-                <div class="mb-6 rounded-md bg-green-50 px-4 py-3 text-sm font-medium text-green-800" role="status">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="mb-6 rounded-md bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">
-                    {{ session('error') }}
-                </div>
-            @endif
-
-            <form method="GET" action="{{ route('reservation.availability') }}" class="rounded-2xl border border-brand-100 bg-white p-6 shadow-sm md:p-8">
-                <h2 class="text-lg font-semibold text-text">1. Reservation Details</h2>
-
-                <input type="hidden" name="reservation_type" value="{{ $type }}">
-
-                <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
-                    <div>
-                        <label for="reservation_date" class="block text-sm font-medium text-text">Date <span class="text-primary" aria-hidden="true">*</span></label>
-                        <input
-                            id="reservation_date"
-                            type="date"
-                            name="reservation_date"
-                            value="{{ old('reservation_date', $reservationDate ?? '') }}"
-                            required
-                            min="{{ date('Y-m-d') }}"
-                            class="mt-1 w-full rounded-md border border-brand-200 bg-white px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary {{ $errors->has('reservation_date') ? 'border-red-400' : '' }}"
-                        >
-                        @error('reservation_date')
-                            <p class="mt-1 text-sm text-red-600" role="alert">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div>
-                        <label for="reservation_time" class="block text-sm font-medium text-text">Time <span class="text-primary" aria-hidden="true">*</span></label>
-                        <input
-                            id="reservation_time"
-                            type="time"
-                            name="reservation_time"
-                            value="{{ old('reservation_time', $reservationTime ?? '') }}"
-                            required
-                            min="10:00"
-                            max="21:00"
-                            class="mt-1 w-full rounded-md border border-brand-200 bg-white px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary {{ $errors->has('reservation_time') ? 'border-red-400' : '' }}"
-                        >
-                        @error('reservation_time')
-                            <p class="mt-1 text-sm text-red-600" role="alert">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div>
-                        <label for="guest_count" class="block text-sm font-medium text-text">Number of guests <span class="text-primary" aria-hidden="true">*</span></label>
-                        <input
-                            id="guest_count"
-                            type="number"
-                            name="guest_count"
-                            value="{{ old('guest_count', $guestCount ?? '') }}"
-                            required
-                            min="1"
-                            max="20"
-                            class="mt-1 w-full rounded-md border border-brand-200 bg-white px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary {{ $errors->has('guest_count') ? 'border-red-400' : '' }}"
-                        >
-                        @error('guest_count')
-                            <p class="mt-1 text-sm text-red-600" role="alert">{{ $message }}</p>
-                        @enderror
-                    </div>
-                </div>
-
-                <button type="submit" class="mt-6 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                    Check Table Availability
-                </button>
-            </form>
-
-            @if ($availableTables !== null)
-                <form
-                    method="POST"
-                    action="{{ route('reservation.store') }}"
-                    class="mt-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm md:p-8"
-                    @if ($type === 'table_and_food') data-food-required="1" @endif
-                >
-                    @csrf
-                    <input type="hidden" name="reservation_type" value="{{ $type }}">
-                    <input type="hidden" name="reservation_date" value="{{ old('reservation_date') }}">
-                    <input type="hidden" name="reservation_time" value="{{ old('reservation_time') }}">
-                    <input type="hidden" name="guest_count" value="{{ old('guest_count') }}">
-
-                    <h2 class="text-lg font-semibold text-text">2. Select a Table</h2>
-
-                    @if ($availableTables->count() > 0)
-                        <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            @foreach ($availableTables as $table)
-                                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-brand-200 bg-white p-4 {{ old('table_id') == $table->id ? 'border-primary bg-brand-50' : 'hover:bg-brand-50' }}">
-                                    <input
-                                        type="radio"
-                                        name="table_id"
-                                        value="{{ $table->id }}"
-                                        class="mt-1 h-4 w-4 text-primary focus:ring-primary"
-                                        @checked(old('table_id') == $table->id)
-                                        required
-                                    >
-                                    <span>
-                                        <span class="block font-semibold text-text">Table {{ $table->table_number }}</span>
-                                        <span class="mt-1 block text-sm text-text-muted">Seats up to {{ $table->capacity }}</span>
-                                        <span class="mt-2 inline-block rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-800">Available</span>
-                                    </span>
-                                </label>
+                @if (session('success'))
+                    <p class="lm-alert" data-state="success" role="status">{{ session('success') }}</p>
+                @endif
+                @if (session('error'))
+                    <p class="lm-alert" data-state="error" role="alert">{{ session('error') }}</p>
+                @endif
+                @if ($errors->any())
+                    <div class="lm-alert" data-state="error" role="alert">
+                        <p class="lm-body">Please check your reservation details.</p>
+                        <ul class="lm-meta mt-(--lm-space-xs) list-inside list-disc">
+                            @foreach ($errors->all() as $error)
+                                <li class="wrap-anywhere">{{ $error }}</li>
                             @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <form id="availability-form" method="GET" action="{{ route('reservation.availability') }}" data-slots-url="{{ route('reservation.slots') }}" data-business-date="{{ $businessNow->toDateString() }}" data-first-bookable-time="{{ $businessNow->addMinutes(30 - $businessNow->minute % 30)->format('H:i') }}" class="lm-divider lm-stack pt-(--lm-space-lg)">
+                    <input type="hidden" name="reservation_type" value="{{ $type }}">
+                    <fieldset class="lm-stack min-w-0">
+                        <legend class="lm-h2 mb-(--lm-space-md)">1. Plan your visit</legend>
+                        <p class="lm-meta lm-muted">All fields are required.</p>
+                        <div class="grid min-w-0 gap-(--lm-space-md) sm:grid-cols-3">
+                            <div class="lm-field min-w-0">
+                                <label for="reservation_date" class="lm-label">Date</label>
+                                <input id="reservation_date" type="date" name="reservation_date" value="{{ old('reservation_date', $reservationDate ?? '') }}" required min="{{ $businessNow->toDateString() }}" class="lm-control min-w-0"
+                                    @if ($errors->has('reservation_date')) aria-invalid="true" aria-describedby="reservation_date-error" @endif>
+                                @error('reservation_date')
+                                    <p id="reservation_date-error" class="lm-error" role="alert">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="lm-field min-w-0">
+                                <label for="reservation_time" class="lm-label">Time</label>
+                                @if (config('restaurant.opening_hours') === null)
+                                <input id="reservation_time" type="time" name="reservation_time" value="{{ old('reservation_time', $reservationTime ?? '') }}" required step="1800" class="lm-control min-w-0"
+                                    @if ($errors->has('reservation_time')) aria-invalid="true" aria-describedby="reservation_time-error" @endif>
+                                @else
+                                    <select id="reservation_time" name="reservation_time" required class="lm-control" data-selected="{{ old('reservation_time') }}"
+                                        @if ($errors->has('reservation_time')) aria-invalid="true" aria-describedby="reservation_time-error" @endif>
+                                        <option value="">Choose a date first</option>
+                                    </select>
+                                @endif
+                                @error('reservation_time')
+                                    <p id="reservation_time-error" class="lm-error" role="alert">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="lm-field min-w-0">
+                                <label for="guest_count" class="lm-label">Number of guests</label>
+                                <input id="guest_count" type="number" name="guest_count" value="{{ old('guest_count', $guestCount ?? '') }}" required min="1" max="20" class="lm-control"
+                                    @if ($errors->has('guest_count')) aria-invalid="true" aria-describedby="guest_count-error" @endif>
+                                @error('guest_count')
+                                    <p id="guest_count-error" class="lm-error" role="alert">{{ $message }}</p>
+                                @enderror
+                            </div>
                         </div>
-                        @error('table_id')
-                            <p class="mt-3 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 font-medium" role="alert">
-                                {{ $message }}
+                    </fieldset>
+                    <p class="lm-meta lm-muted">Start on the hour or half hour. Each visit lasts {{ \App\Services\ReservationService::DURATION_MINUTES }} minutes.</p>
+                    <p id="slot-status" class="lm-meta lm-muted" role="status"></p>
+                    <button type="submit" class="lm-button self-start">Check Table Availability</button>
+                </form>
+
+                @if ($availableTables !== null)
+                    @php
+                        $requestedGuests = (int) old('guest_count', $guestCount ?? 0);
+                        $hasEligibleTable = $availableTables->isNotEmpty();
+                    @endphp
+                    <form method="POST" action="{{ route('reservation.review') }}" id="reservation-form" class="lm-divider lm-stack mt-(--lm-space-lg) pt-(--lm-space-lg)"
+                        @if ($type === 'table_and_food') data-food-required="1" @endif>
+                        @csrf
+                        <input type="hidden" name="reservation_type" value="{{ $type }}">
+                        <input type="hidden" name="reservation_date" value="{{ old('reservation_date') }}">
+                        <input type="hidden" name="reservation_time" value="{{ old('reservation_time') }}">
+                        <input type="hidden" name="guest_count" value="{{ old('guest_count') }}">
+
+                        <fieldset class="lm-stack min-w-0" @if ($errors->has('table_id')) aria-describedby="table_id-error" @endif>
+                            <legend class="lm-h2 mb-(--lm-space-md)">2. Choose a table</legend>
+                            <p class="lm-meta lm-muted" role="status">
+                                For {{ old('reservation_date') }} at {{ old('reservation_time') }} · {{ $requestedGuests }} guests.
                             </p>
-                        @enderror
-                    @else
-                        <p class="mt-5 rounded-md bg-brand-50 px-4 py-4 text-center text-brand-800">
-                            No tables available. Please try a different date or time.
-                        </p>
-                    @endif
+                            @if ($availableTables->count() > 0)
+                                <x-reservation-floor-plan :tables="$availableTables" :plan="$floorPlan" />
+                            @else
+                                <p class="lm-empty lm-body" role="status">
+                                    @if ($partyTooLarge)
+                                        We don't have a table large enough for this party size. Please choose a smaller party size.
+                                    @elseif (! $hasSuitableTables)
+                                        No supported tables suit this party size. Please adjust your party size.
+                                    @else
+                                        No suitable tables are available for this time. Choose another date, time or party size above.
+                                    @endif
+                                </p>
+                            @endif
+                            @error('table_id')
+                                <p id="table_id-error" class="lm-error" role="alert">{{ $message }}</p>
+                            @enderror
+                        </fieldset>
 
-                    @if ($type === 'table_and_food' && $availableTables->count() > 0)
-                        <div class="mt-10">
-                            <h2 class="text-lg font-semibold text-text">3. Pre-order Food</h2>
-                            <p class="mt-1 text-sm text-text-muted">Pick dishes you would like ready when you arrive. You can also order at the table later.</p>
-
-                            @php
-                                $grouped = $menuItems->groupBy(fn ($item) => $item->category->name);
-                            @endphp
-
-                            <div class="mt-5 space-y-6" id="food-selection">
-                                @foreach ($grouped as $categoryName => $items)
-                                    <div>
-                                        <h3 class="text-sm font-semibold uppercase tracking-wide text-text-muted">{{ $categoryName }}</h3>
-                                        <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        @if ($type === 'table_and_food' && $availableTables->count() > 0)
+                            <fieldset class="lm-stack min-w-0 mt-(--lm-space-lg)" aria-describedby="food-guidance food-selection-error">
+                                <legend class="lm-h2 mb-(--lm-space-md)">3. Choose your food</legend>
+                                <p id="food-guidance" class="lm-body lm-muted">Select at least one dish. Adjust its quantity below, or uncheck it to remove it from this reservation. Your order cart is separate.</p>
+                                @php($grouped = $menuItems->groupBy(fn ($item) => $item->category->name))
+                                <div id="food-selection" class="lm-stack">
+                                    @forelse ($grouped as $categoryName => $items)
+                                        <div class="min-w-0">
+                                            <p class="lm-eyebrow mb-(--lm-space-md) wrap-anywhere">{{ $categoryName }}</p>
                                             @foreach ($items as $item)
-                                                <div class="flex items-center justify-between gap-3 rounded-lg border border-brand-100 p-3">
-                                                    <div class="min-w-0">
-                                                        <p class="truncate text-sm font-medium text-text">{{ $item->name }}</p>
-                                                        <p class="text-sm text-text-muted">RM {{ number_format($item->price, 2) }}</p>
+                                                <x-menu-item :item="$item" heading="h3" :orderable="false" data-reservation-food>
+                                                    <div class="flex flex-col gap-(--lm-space-sm) sm:flex-row sm:items-end sm:justify-between">
+                                                        <label for="food-{{ $item->id }}" class="lm-choice min-w-0">
+                                                            <input id="food-{{ $item->id }}" type="checkbox" name="food_items[{{ $item->id }}][menu_item_id]" value="{{ $item->id }}"
+                                                                class="food-check lm-check shrink-0" data-item-id="{{ $item->id }}" data-name="{{ $item->name }}" data-price="{{ $item->price }}"
+                                                                @checked(old('food_items.'.$item->id.'.menu_item_id') == $item->id)
+                                                                @if ($errors->has('food_items.'.$item->id.'.menu_item_id')) aria-invalid="true" aria-describedby="food-{{ $item->id }}-error" @endif>
+                                                            <span class="lm-meta wrap-anywhere">Select {{ $item->name }}</span>
+                                                        </label>
+                                                        <div class="lm-field sm:w-28 sm:shrink-0">
+                                                            <label for="food-quantity-{{ $item->id }}" class="lm-label">Quantity<span class="sr-only"> for {{ $item->name }}</span></label>
+                                                            <select id="food-quantity-{{ $item->id }}" name="food_items[{{ $item->id }}][quantity]" class="food-qty lm-control"
+                                                                @disabled(old('food_items.'.$item->id.'.menu_item_id') != $item->id)
+                                                                @if ($errors->has('food_items.'.$item->id.'.quantity')) aria-invalid="true" aria-describedby="food-quantity-{{ $item->id }}-error" @endif>
+                                                                @for ($i = 1; $i <= 10; $i++)
+                                                                    <option value="{{ $i }}" @selected(old('food_items.'.$item->id.'.quantity', 1) == $i)>{{ $i }}</option>
+                                                                @endfor
+                                                            </select>
+                                                        </div>
                                                     </div>
-                                                    <div class="flex shrink-0 items-center gap-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            name="food_items[{{ $item->id }}][menu_item_id]"
-                                                            value="{{ $item->id }}"
-                                                            class="food-check h-4 w-4 rounded border-brand-300 text-primary focus:ring-primary"
-                                                            data-item-id="{{ $item->id }}"
-                                                            data-name="{{ $item->name }}"
-                                                            data-price="{{ $item->price }}"
-                                                        >
-                                                        <select
-                                                            name="food_items[{{ $item->id }}][quantity]"
-                                                            class="food-qty rounded-md border border-brand-200 px-2 py-1 text-sm text-text"
-                                                            disabled
-                                                        >
-                                                            @for ($i = 1; $i <= 10; $i++)
-                                                                <option value="{{ $i }}">{{ $i }}</option>
-                                                            @endfor
-                                                        </select>
-                                                    </div>
-                                                </div>
+                                                    @error('food_items.'.$item->id.'.menu_item_id')
+                                                        <p id="food-{{ $item->id }}-error" class="lm-error" role="alert">{{ $message }}</p>
+                                                    @enderror
+                                                    @error('food_items.'.$item->id.'.quantity')
+                                                        <p id="food-quantity-{{ $item->id }}-error" class="lm-error" role="alert">{{ $message }}</p>
+                                                    @enderror
+                                                </x-menu-item>
                                             @endforeach
                                         </div>
+                                    @empty
+                                        <p class="lm-empty lm-body" role="status">No dishes are available to pre-order. Please try again later or choose Table Only.</p>
+                                    @endforelse
+                                </div>
+                                <p class="lm-divider lm-body flex flex-wrap justify-between gap-(--lm-space-sm) pt-(--lm-space-md)">
+                                    <span>Food total</span>
+                                    <span id="food-total" class="tabular-nums" role="status" aria-live="polite">RM 0.00</span>
+                                </p>
+                                <p id="food-selection-error" class="lm-error" role="alert" hidden>Please select at least one dish to pre-order.</p>
+                                @error('food_items')
+                                    <p class="lm-error" role="alert">{{ $message }}</p>
+                                @enderror
+                            </fieldset>
+                        @endif
+
+                        @if ($availableTables->count() > 0)
+                            <fieldset class="lm-divider lm-stack min-w-0 mt-(--lm-space-lg) pt-(--lm-space-lg)">
+                                <legend class="lm-h2 mb-(--lm-space-md)">{{ $type === 'table_and_food' ? '4.' : '3.' }} Your details</legend>
+                                <p class="lm-meta lm-muted">All fields are required except notes.</p>
+                                <div class="grid min-w-0 gap-(--lm-space-md) sm:grid-cols-2">
+                                    <div class="lm-field">
+                                        <label for="customer_name" class="lm-label">Name</label>
+                                        <input id="customer_name" type="text" name="customer_name" value="{{ old('customer_name') }}" required autocomplete="name" class="lm-control"
+                                            @if ($errors->has('customer_name')) aria-invalid="true" aria-describedby="customer_name-error" @endif>
+                                        @error('customer_name')
+                                            <p id="customer_name-error" class="lm-error" role="alert">{{ $message }}</p>
+                                        @enderror
                                     </div>
-                                @endforeach
-                            </div>
-
-                            <p class="mt-4 rounded-md bg-brand-50 px-4 py-3 text-sm text-brand-800">
-                                Food total: <span class="font-bold" id="food-total">RM 0.00</span>
-                            </p>
-                            <p class="mt-2 text-xs text-text-muted">
-                                You will pay for your selected food with FIUU to confirm this reservation.
-                            </p>
-                            @error('food_items')
-                                <p class="mt-2 text-sm text-red-600" role="alert">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    @endif
-
-                    @if ($availableTables->count() > 0)
-                        <div class="mt-10">
-                            <h2 class="text-lg font-semibold text-text">4. Your Details</h2>
-
-                            <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                <div>
-                                    <label for="customer_name" class="block text-sm font-medium text-text">Name <span class="text-primary" aria-hidden="true">*</span></label>
-                                    <input
-                                        id="customer_name"
-                                        type="text"
-                                        name="customer_name"
-                                        value="{{ old('customer_name') }}"
-                                        required
-                                        autocomplete="name"
-                                        class="mt-1 w-full rounded-md border border-brand-200 bg-white px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary {{ $errors->has('customer_name') ? 'border-red-400' : '' }}"
-                                    >
-                                    @error('customer_name')
-                                        <p class="mt-1 text-sm text-red-600" role="alert">{{ $message }}</p>
-                                    @enderror
+                                    <div class="lm-field">
+                                        <label for="customer_email" class="lm-label">Email</label>
+                                        <input id="customer_email" type="email" name="customer_email" value="{{ old('customer_email') }}" required autocomplete="email" class="lm-control"
+                                            @if ($errors->has('customer_email')) aria-invalid="true" aria-describedby="customer_email-error" @endif>
+                                        @error('customer_email')
+                                            <p id="customer_email-error" class="lm-error" role="alert">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="lm-field">
+                                        <label for="customer_phone" class="lm-label">Phone number</label>
+                                        <input id="customer_phone" type="tel" name="customer_phone" value="{{ old('customer_phone') }}" required autocomplete="tel" placeholder="01XXXXXXXXX" class="lm-control"
+                                            @if ($errors->has('customer_phone')) aria-invalid="true" aria-describedby="customer_phone-error" @endif>
+                                        @error('customer_phone')
+                                            <p id="customer_phone-error" class="lm-error" role="alert">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="lm-field sm:col-span-2">
+                                        <label for="special_request" class="lm-label">Notes (optional)</label>
+                                        <textarea id="special_request" name="special_request" rows="3" class="lm-control"
+                                            @if ($errors->has('special_request')) aria-invalid="true" aria-describedby="special_request-error" @endif>{{ old('special_request') }}</textarea>
+                                        @error('special_request')
+                                            <p id="special_request-error" class="lm-error" role="alert">{{ $message }}</p>
+                                        @enderror
+                                    </div>
                                 </div>
-
-                                <div>
-                                    <label for="customer_email" class="block text-sm font-medium text-text">Email <span class="text-primary" aria-hidden="true">*</span></label>
-                                    <input
-                                        id="customer_email"
-                                        type="email"
-                                        name="customer_email"
-                                        value="{{ old('customer_email') }}"
-                                        required
-                                        autocomplete="email"
-                                        class="mt-1 w-full rounded-md border border-brand-200 bg-white px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary {{ $errors->has('customer_email') ? 'border-red-400' : '' }}"
-                                    >
-                                    @error('customer_email')
-                                        <p class="mt-1 text-sm text-red-600" role="alert">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label for="customer_phone" class="block text-sm font-medium text-text">Phone number <span class="text-primary" aria-hidden="true">*</span></label>
-                                    <input
-                                        id="customer_phone"
-                                        type="tel"
-                                        name="customer_phone"
-                                        value="{{ old('customer_phone') }}"
-                                        required
-                                        autocomplete="tel"
-                                        placeholder="01XXXXXXXXX"
-                                        class="mt-1 w-full rounded-md border border-brand-200 bg-white px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary {{ $errors->has('customer_phone') ? 'border-red-400' : '' }}"
-                                    >
-                                    @error('customer_phone')
-                                        <p class="mt-1 text-sm text-red-600" role="alert">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label for="special_request" class="block text-sm font-medium text-text">Notes (optional)</label>
-                                    <textarea
-                                        id="special_request"
-                                        name="special_request"
-                                        rows="1"
-                                        class="mt-1 w-full rounded-md border border-brand-200 bg-white px-4 py-2.5 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                                        placeholder="Birthday, seating preference, allergies..."
-                                    >{{ old('special_request') }}</textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button
-                            id="reservation-submit"
-                            type="submit"
-                            class="mt-8 inline-flex w-full items-center justify-center rounded-md {{ $type === 'table_and_food' ? 'bg-accent hover:bg-accent-light' : 'bg-primary hover:bg-primary-dark' }} px-6 py-3 text-base font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2"
-                        >
-                            {{ $type === 'table_and_food' ? 'Continue to Payment' : 'Confirm Reservation' }}
-                        </button>
-                    @endif
-                </form>
-            @endif
+                            </fieldset>
+                            @if ($type === 'table_and_food')
+                                <p class="lm-alert lm-meta" data-state="pending">Continuing creates a pending reservation with a 15-minute payment hold. Your table is confirmed only after payment for your food is verified.</p>
+                            @endif
+                            <button id="reservation-submit" type="submit" class="lm-button w-full sm:w-auto sm:self-start"
+                                @disabled(! $hasEligibleTable || ($type === 'table_and_food' && $menuItems->isEmpty()))>
+                                Review Reservation
+                            </button>
+                        @endif
+                    </form>
+                @endif
+            </div>
         </div>
     </section>
 
-    @if ($type === 'table_and_food' && $availableTables !== null)
-        @push('scripts')
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    const items = document.querySelectorAll('.food-check');
-                    const totalEl = document.getElementById('food-total');
-
-                    function currency(n) {
-                        return 'RM ' + n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    }
-
-                    function recalc() {
-                        let total = 0;
-                        items.forEach(function (check) {
-                            if (check.checked) {
-                                const row = check.closest('.rounded-lg');
-                                const qty = row.querySelector('.food-qty');
-                                total += parseFloat(check.dataset.price) * parseInt(qty.value, 10);
-                            }
-                        });
-                        totalEl.textContent = currency(total);
-                    }
-
-                    items.forEach(function (check) {
-                        const row = check.closest('.rounded-lg');
-                        const qty = row.querySelector('.food-qty');
-
-                        check.addEventListener('change', function () {
-                            qty.disabled = !check.checked;
-                            if (!check.checked) {
-                                qty.value = '1';
-                            }
-                            recalc();
-                        });
-
-                        qty.addEventListener('change', recalc);
-                    });
-
-                    recalc();
-
-                    const form = document.querySelector('form[action$="/reservation"]');
-                    if (form) {
-                        form.addEventListener('submit', function (e) {
-                            const anyChecked = Array.from(items).some(function (check) { return check.checked; });
-                            if (form.dataset.foodRequired && !anyChecked) {
-                                e.preventDefault();
-                                alert('Please select at least one dish to pre-order.');
-                            }
-                        });
-                    }
-                    recalc();
-                });
-            </script>
-        @endpush
-    @endif
 @endsection

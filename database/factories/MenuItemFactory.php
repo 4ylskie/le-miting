@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
+use App\Services\Ai\AiRecommendationOptions;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -27,10 +28,10 @@ class MenuItemFactory extends Factory
             'slug' => Str::slug($name),
             'description' => $this->faker->sentence(),
             'price' => $this->faker->randomFloat(2, 8, 60),
-            'spice_level' => $this->faker->optional()->randomElement(['Mild', 'Medium', 'Hot', 'Extra Hot']),
-            'protein_type' => $this->faker->optional()->randomElement(['Chicken', 'Beef', 'Lamb', 'Fish', 'Prawn', 'None']),
-            'dietary_type' => $this->faker->optional()->randomElement(['Halal', 'Vegetarian', 'Vegan']),
-            'flavor_profile' => $this->faker->optional()->randomElement(['Spicy', 'Sweet', 'Savory', 'Sour', 'Salty']),
+            'spice_level' => $this->faker->randomElement(AiRecommendationOptions::VALUES['spice_level']),
+            'protein_type' => $this->faker->optional()->randomElement(AiRecommendationOptions::VALUES['protein_type']),
+            'dietary_type' => $this->faker->optional()->randomElement(AiRecommendationOptions::VALUES['dietary_type']),
+            'flavor_profile' => $this->faker->optional()->randomElement(AiRecommendationOptions::VALUES['flavor_profile']),
             'is_available' => true,
             'is_featured' => false,
             'sort_order' => 0,

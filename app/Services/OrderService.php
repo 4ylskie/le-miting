@@ -2,36 +2,93 @@
 
 namespace App\Services;
 
+use App\Events\OrderPaymentVerified;
+use App\Mail\GoogleReviewInvitationMail;
 use App\Models\MenuItem;
 use App\Models\Order;
+use App\Services\Payments\PaymentEligibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
+    public function __construct(private CartService $carts, private PaymentEligibility $payments) {}
+
+    /** @return array<string, array<int, string>> */
+    public function transitions(): array
+    {
+        return [
+            'pending' => ['confirmed', 'cancelled'],
+            'confirmed' => ['preparing', 'cancelled'],
+            'preparing' => ['ready', 'cancelled'],
+            'ready' => ['completed', 'cancelled'],
+            'completed' => [], 'cancelled' => [],
+        ];
+    }
+
+    /** Return a user-facing rejection, or null for the winning transition. */
+    public function transition(int $orderId, string $target, string $expectedStatus): ?string
+    {
+        return DB::transaction(function () use ($orderId, $target, $expectedStatus): ?string {
+            $original = Order::findOrFail($orderId);
+            $payments = $target !== 'cancelled' ? $this->payments->lockFor($original) : null;
+            $order = Order::query()->lockForUpdate()->findOrFail($orderId);
+
+            if ($order->status !== $expectedStatus) {
+                return 'This order has changed. Refresh the page before trying again.';
+            }
+            if (! in_array($target, $this->transitions()[$order->status] ?? [], true)) {
+                return 'Cannot move an order from '.$order->status.' to '.$target.'.';
+            }
+            if ($target !== 'cancelled' && ! $this->payments->isEligible($order, $payments)) {
+                return PaymentEligibility::ERROR;
+            }
+
+            $order->update(['status' => $target]);
+            if ($target === 'confirmed') {
+                DB::afterCommit(fn () => OrderPaymentVerified::dispatch($order));
+            } elseif ($target === 'completed') {
+                DB::afterCommit(function () use ($order): void {
+                    try {
+                        Mail::to($order->customer_email)->send(new GoogleReviewInvitationMail(
+                            $order->customer_name, 'order '.$order->order_number, config('restaurant.google_review_url'),
+                        ));
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
+                });
+            }
+
+            return null;
+        });
+    }
+
     public function createFromCart(array $data): Order
     {
-        $cart = session()->get('cart', ['items' => []]);
+        $items = collect($this->carts->orderItems())->values();
 
-        if (empty($cart['items'])) {
+        if ($items->isEmpty()) {
             throw ValidationException::withMessages([
                 'cart' => 'Your cart is empty.',
             ]);
         }
 
-        $items = collect($cart['items'])->values();
-
-        $unavailable = $items->filter(fn ($item) => ! MenuItem::where('id', $item['menu_item_id'])
-            ->where('is_available', true)
-            ->exists());
-
-        if ($unavailable->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'cart' => 'Some items in your cart are no longer available. Please review your cart.',
-            ]);
-        }
-
         return DB::transaction(function () use ($data, $items) {
+            $menuItems = MenuItem::query()
+                ->where('is_available', true)
+                ->whereHas('category', fn ($query) => $query->where('is_active', true))
+                ->whereIn('id', $items->pluck('menu_item_id'))
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            if ($menuItems->count() !== $items->count()) {
+                throw ValidationException::withMessages([
+                    'cart' => 'Some items in your cart are no longer available. Please remove them before checking out.',
+                ]);
+            }
+
             $total = 0;
 
             $order = Order::create([
@@ -46,7 +103,7 @@ class OrderService
             ]);
 
             foreach ($items as $cartItem) {
-                $menuItem = MenuItem::where('is_available', true)->findOrFail($cartItem['menu_item_id']);
+                $menuItem = $menuItems->get($cartItem['menu_item_id']);
 
                 $order->orderItems()->create([
                     'menu_item_id' => $menuItem->id,
@@ -59,8 +116,6 @@ class OrderService
             }
 
             $order->update(['total' => round($total, 2)]);
-
-            session()->forget('cart');
 
             return $order->refresh();
         });

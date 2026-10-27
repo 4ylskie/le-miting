@@ -27,11 +27,11 @@ Phase 4  — Reservation System
       ↓
 Phase 5  — Payment Integration (FIUU + ReceiptService)
       ↓
-Phase 6  — Rasa AI, Email, and Rasa AI on Contact Us
+Phase 6  — Rasa AI and Email
       ↓
 Phase 7  — Admin Panel
       ↓
-Phase 8  — QR Codes, Feedback, and Reports
+Phase 8  — Reservation Identifiers, External Google Review Invitations, and Reports
       ↓
 Phase 9  — Testing
       ↓
@@ -51,7 +51,6 @@ Configure .env (database, mail, FIUU credentials, OpenAI API key, app key, app U
 Configure MySQL database connection
 Configure Blade templating
 Install and configure Tailwind CSS
-Install simplesoftwareio/simple-qrcode
 Install barryvdh/laravel-dompdf
 Configure Laravel Mail (SMTP)
 Set up Git repository and .gitignore (exclude .env, vendor/, node_modules/)
@@ -78,7 +77,6 @@ order_items
 payments
 reservations
 reservation_foods
-feedback
 Migration tasks
 users — name, email, password, role (default admin), remember_token, timestamps
 menu_categories — name, slug, sort_order, is_active, timestamps
@@ -89,14 +87,12 @@ order_items — order_id (FK), menu_item_id (FK nullable), item_name, unit_price
 payments — order_id (FK nullable), reservation_id (FK nullable), provider, provider_reference (unique), status, amount, currency, raw_response, paid_at, timestamps
 reservations — table_id (FK), reservation_number, reservation_type, customer_name, customer_email, customer_phone, guest_count, reservation_date, reservation_time, duration_minutes (default 120), status, notes, timestamps
 reservation_foods — reservation_id (FK), menu_item_id (FK nullable), item_name, unit_price, quantity, timestamps
-feedback — order_id (FK nullable), reservation_id (FK nullable), food_rating, service_rating, experience_rating, comment, timestamps
 Model tasks
 Create Eloquent model for each table
 Define $fillable on every model (no $guarded = [])
 Define soft deletes on MenuItem
 Define all relationships (see BACKEND_DESIGN.md §5.2)
 Verify Payment mutual-exclusivity (order_id XOR reservation_id)
-Verify Feedback mutual-exclusivity (order_id XOR reservation_id)
 Seeder tasks
 AdminSeeder — provisions the initial admin account (role = admin)
 MenuCategorySeeder — seed initial categories
@@ -110,14 +106,14 @@ All migrations run cleanly. All Eloquent models defined with correct relationshi
 
 Depends on: Phase 2
 
-Goal: guest can browse the menu, build a cart, reach checkout, and submit a contact enquiry. Rasa AI widget on Contact Us is added in Phase 6 — the page and form are built here.
+Goal: guest can browse the menu, build a cart, reach checkout, and submit a contact enquiry. Rasa AI remains on its dedicated page; no Contact Us recommendation widget is planned.
 
 Landing page
 HomeController@index → display landing page
 Hero section with Order and Reserve CTAs
 Featured menu items section (query MenuItem where is_featured = true)
-Restaurant introduction, experience sections, testimonials
-Restaurant contact information and opening hours
+Restrained editorial landing composition using approved photography and verified restaurant content only; omit unsupported story, testimonials, ratings, and social proof
+Verified restaurant contact information and opening hours when configured
 Navigation to Menu / Order, Reserve, Contact Us
 Menu
 MenuController@index → display menu with categories, search, filters
@@ -125,8 +121,8 @@ MenuController@show → display single menu item
 Category filter (query by menu_category_id)
 Search by item name
 Attribute filters (spice_level, protein_type, dietary_type, flavor_profile)
-Display is_available = false items as unavailable — not orderable
-No rating display on menu cards — ratings are not stored on menu_items (V1 decision)
+Customer menu discovery, featured dishes, item detail, and Rasa AI query only `is_available = true` items. If an item becomes unavailable after it has entered a cart, keep it visible there solely for removal; exclude it from totals and block checkout until removed.
+No rating display in menu discovery interfaces — ratings are not stored on menu_items (V1 decision)
 Empty state when no items match search or filters
 Cart (session-based)
 CartController@index → view cart
@@ -134,7 +130,7 @@ CartController@store → add item (verify is_available = true)
 CartController@update → update quantity
 CartController@destroy → remove item
 CartController@clear → clear cart
-Cart stored in Laravel session — no database table
+Cart stored in Laravel session — no database table (`cart.order` for normal orders and `cart.reservation` for Table + Food)
 Empty cart state with link back to menu
 Cart total calculated from live menu_items.price — never from client-submitted values
 Checkout (order creation — stops before payment)
@@ -144,13 +140,13 @@ Verify all cart items still is_available = true
 Calculate total server-side from database prices
 Create Order (status: pending)
 Create OrderItem rows — snapshot item_name + unit_price
-Clear session cart
+Keep `cart.order` while payment is pending; clear it only after verified payment confirms the order
 Redirect to FIUU (implemented in Phase 5)
 Contact Us
 ContactController@create → display Contact Us page
-Restaurant address, phone, email, operating hours
+Verified restaurant address, phone, email, and operating hours when configured
 Contact form (name, email, message — all required)
-Rasa AI widget placeholder (wired in Phase 6)
+No embedded recommendation widget
 ContactController@store → StoreContactRequest validates input
 Dispatch ContactEnquiryMail to restaurant
 Success response on send, error response on failure
@@ -176,7 +172,7 @@ Return available tables for the requested slot
 ReservationController@store → StoreReservationRequest validates input
 Validate guest_count <= tables.capacity
 Re-check availability inside DB transaction (race condition protection)
-table_only: create Reservation (status: confirmed immediately) → QR and email triggered in Phase 8
+table_only: create Reservation (status: confirmed immediately) → reservation number and email triggered in Phase 8
 table_and_food: create Reservation (status: pending) + ReservationFood rows (snapshot item_name + unit_price) → redirect to FIUU (Phase 5)
 ReservationController@confirmation → display reservation confirmation page
 ReservationController@cancelForm (signed, 24-hour expiry) → display cancellation confirmation form
@@ -199,6 +195,8 @@ Depends on: Phase 3 (order creation), Phase 4 (reservation creation)
 
 Goal: FIUU payment flows work for both orders and reservations. Receipt generation is implemented here because it is triggered by the verified payment callback.
 
+Development and demonstrations use a signed mock payment gateway when FIUU is not configured. It offers non-sensitive fake methods and controlled success, failure, or abandonment outcomes; server-side mock HMAC verification, authoritative stored amounts, callback handling, return handling, retry, and idempotency use the same application lifecycle. This is not a claim of FIUU protocol compatibility and never processes real funds.
+
 FiuuPaymentService
 FiuuPaymentService::prepare(Order|Reservation) — build payment request, generate reference
 FiuuPaymentService::verify(array $callbackData) — verify callback signature, match reference, verify amount
@@ -216,7 +214,7 @@ GET /orders/{order}/confirmation → OrderController@confirmation
 Reservation payment flow (table_and_food)
 Same PaymentController@callback — detect whether reference belongs to Order or Reservation
 On verified: Reservation.status → confirmed, Payment.status → paid (reservation_id set, order_id null)
-Trigger QR generation (Phase 8) and ReservationConfirmationMail (Phase 6) — stub calls
+Trigger ReservationConfirmationMail with the readable reservation number (Phase 6)
 ReceiptService (implemented in this phase)
 ReceiptService::generate(Order $order) — retrieve Order, OrderItem, Payment from database
 Render Blade view as DomPDF PDF
@@ -224,48 +222,45 @@ Return PDF for attachment or streaming
 No receipts table — generated on demand each time
 GET /orders/{order}/receipt (signed, 24-hour expiry) → OrderController@receipt — stream PDF
 Payment failure and hold expiry
-Failed payment: Payment.status → failed, guest shown retry option, order/reservation remains pending
+Failed payment: Payment.status → failed, guest can retry the existing eligible pending order/reservation without creating a duplicate parent; clear only that flow's cart context after verified payment confirms it
 Hold expiry: no action needed at callback time — availability query already excludes stale pending rows
 Deliverable
 
 Successful and failed FIUU payment flows work for both orders and reservations. ReceiptService generates PDFs on demand. Signed receipt link functional.
 
-8. Phase 6 — Rasa AI, Email, and Rasa AI on Contact Us
+8. Phase 6 — Rasa AI and Email
 
 Depends on: Phase 5 (payment triggers email), Phase 3 (Contact Us page exists)
 
-Goal: all five Mailables sending correctly. Rasa AI recommendations working on both surfaces. Rasa AI widget wired into the existing Contact Us page.
+Goal: all five Mailables sending correctly. Rasa AI works on its dedicated page with free-text preferences and the approved controlled allergen-exclusion input; deterministic mock mode remains the default.
 
 OpenAiService
-OpenAiService::recommend(array $preferences) — retrieve MenuItem where is_available = true, build prompt with items + preferences, call OpenAI API
+AiRecommender::recommend(array $items, array $preferences) — controller supplies database-filtered candidates; MockAiRecommender is default, OpenAiService is configurable
 Validate API response — map each recommendation to a real MenuItem row, drop anything not found or not available
 Return validated results
 Failure: log error, return graceful fallback — Rasa AI is never a blocking dependency
 Rasa AI recommendation endpoint
 POST /ai/recommendations → AiRecommendationController@recommend (rate-limited via throttle middleware)
-Validate preference inputs (spice_level, protein_type, dietary_type, flavor_profile)
-Call OpenAiService::recommend()
+Validate bounded preferences_text and/or valid excluded_allergens[]; reject legacy customer-posted preference selectors; interpret supported text into internal filters and canonical allergen exclusions
+Call AiRecommender::recommend($items, $preferences)
 Return validated recommendations or fallback message
-Rasa AI on Contact Us
-Wire OpenAiService into ContactController@create
-Add Rasa AI widget to the Contact Us view (replacing placeholder from Phase 3)
-Rasa AI failure on Contact Us must not affect the contact form — both are independent
+Rasa AI is not embedded on Contact Us; keep ContactController independent of recommendation providers.
 Mailables (all five)
 Mailable	Trigger	Key contents
 OrderConfirmationMail	Payment verified → Order.status → confirmed (Phase 5 callback)	Order summary, PDF receipt attached, signed receipt link
-ReservationConfirmationMail	Reservation.status → confirmed	Reservation details, QR code image, signed cancellation link
+ReservationConfirmationMail	Reservation.status → confirmed	Reservation details, readable reservation number, signed cancellation link
 ReservationCancellationMail	Reservation.status → cancelled	Cancellation confirmation
-FeedbackInvitationMail	Order or Reservation.status → completed	Signed feedback form link
+GoogleReviewInvitationMail	Order or Reservation.status → completed	Optional link to configured external Google Review destination
 ContactEnquiryMail	Contact form submitted	Guest name, email, message — sent to restaurant
 Email is sent synchronously (no queue) for V1
 Failed email is logged — does not roll back the triggering transaction
 SMTP credentials from .env
 Connect Phase 5 stubs
 Replace stub calls in PaymentController@callback with real OrderConfirmationMail dispatch (with PDF attached)
-Replace stub calls with real ReservationConfirmationMail dispatch (QR wired in Phase 8)
+Replace stub calls with real ReservationConfirmationMail dispatch using the readable reservation number.
 Deliverable
 
-Rasa AI recommendations work on the menu page and Contact Us page. All five Mailables send correctly. OrderConfirmationMail includes the receipt PDF.
+Rasa AI recommendations work on the dedicated page only. All five Mailables send correctly. OrderConfirmationMail includes the receipt PDF.
 
 9. Phase 7 — Admin Panel
 
@@ -283,14 +278,14 @@ Apply auth + EnsureAdminRole to all /admin/* routes except login
 Unauthenticated request → redirect to /admin/login
 Non-admin authenticated request → 403
 Dashboard
-Admin\DashboardController@index — display: today's orders, today's reservations, today's revenue, pending orders, pending reservations, available tables, recent feedback
+Admin\DashboardController@index — display: today's orders, today's reservations, today's revenue, pending orders, pending reservations, available tables
 Orders
 List orders, view details, view guest information, view ordered items, view order type
 Update Order.status (pending → confirmed → preparing → ready → completed / cancelled)
 View Payment.status — read-only, not editable
 Order status and payment status clearly separated in UI
 Reservations
-List reservations, search by reservation_number or QR content
+List reservations, search by reservation_number
 Confirm reservations, cancel reservations, mark completed
 View guest_count, table_id, reservation_type, pre-ordered food
 Adjust table assignment (re-assign to another table)
@@ -308,58 +303,36 @@ Toggle is_available
 Toggle is_featured
 Update price, description, image, category, spice_level, protein_type, dietary_type, flavor_profile
 Soft-delete (deactivate) rather than hard-delete — preserve historical records
-Feedback
-List feedback, view ratings and comments, view linked order or reservation
-View average ratings, filter by order/reservation
 Reports (stub — implemented in Phase 8)
 Reports section visible but report generation wired in Phase 8
 Deliverable
 
-Authenticated administrator can manage orders, reservations, tables, menu, and feedback. Unauthenticated requests redirect to login. Non-admin requests return 403.
+Authenticated administrator can manage orders, reservations, tables, and menu data. Unauthenticated requests redirect to login. Non-admin requests return 403.
 
-10. Phase 8 — QR Codes, Feedback, and Reports
+10. Phase 8 — Reservation Identifiers, External Google Review Invitations, and Reports
 
 Depends on: Phase 6 (email Mailables), Phase 7 (admin panel)
 
-Goal: reservation QR codes, post-completion feedback flow, Google Review redirect, and admin report generation all functional.
+Goal: readable reservation identifiers, optional post-completion external Google Review invitations, and admin report generation all functional.
 
-QR code generation
-Library: simplesoftwareio/simple-qrcode
-Generate QR after Reservation.status → confirmed
-Payload: reservation_number string (plain text — not a signed URL, not a link)
-Embed QR image in ReservationConfirmationMail (connect stub from Phase 6)
-Display QR on reservation confirmation page
-Also display reservation_number as readable text alongside the QR
-Feedback
-GET /feedback/{token} (signed, 24-hour expiry) → FeedbackController@create
-Validate signed URL
-Resolve token to Order or Reservation
-Verify status = completed
-Display feedback form (food rating, service rating, experience rating, comment)
-POST /feedback/{token} (signed) → FeedbackController@store
-StoreFeedbackRequest validates ratings (1–5 required), comment (optional)
-Verify exactly one of order_id / reservation_id set
-Verify referenced record is completed
-Store Feedback row
-Display thank-you page with Google Review link
-FeedbackInvitationMail dispatched when Order or Reservation.status → completed
-Wire status change events in admin panel (Admin\OrderController@updateStatus, Admin\ReservationController@updateStatus)
-Google Review redirect
-Thank-you page after feedback submission includes a static link to Le Miting's Google review page
-Link opens in new tab
-Laravel does not call the Google API — no data is sent to Google
-Link is static — not dynamically generated, not seeded with feedback data
+Reservation identifier
+Generate a unique readable reservation_number when the reservation is created.
+Display it in ReservationConfirmationMail, on the reservation confirmation page, and in admin records.
+Use it for administrator lookup/check-in validation only; it is not a signed URL or a credential for protected actions.
+External Google Review invitation
+GoogleReviewInvitationMail is dispatched when an Order or Reservation first reaches `completed`.
+The email links to the configured external Google Review destination and makes clear that review submission is optional.
+Le Miting does not expose a feedback route or form, retain review data, submit a review, or call Google APIs. The link carries no internal transaction identifier.
 Reports
-Six separate report controllers/actions — one PDF per type/period:
+Four report actions — one PDF per type/period:
 Admin\ReportController@salesWeekly / @salesMonthly — sales data (orders, revenue, popular items)
 Admin\ReportController@reservationsWeekly / @reservationsMonthly — reservation data (totals, guest count, popular times)
-Admin\ReportController@feedbackWeekly / @feedbackMonthly — feedback data (ratings, distribution, review count)
 Each generates its own DomPDF PDF, downloaded from its own route
 Report periods: rolling windows — weekly = last 7 days, monthly = last 30 days (PRD §33)
 No daily reports — not in PRD scope
 Deliverable
 
-Reservation QR codes generated and included in confirmation emails. Feedback form accessible via signed link. Feedback stored after completion. Google Review link shown after feedback submission. Weekly and monthly PDF reports downloadable from admin panel.
+Reservation numbers displayed in confirmation emails, confirmation pages, and admin records. Completed transactions may receive an optional external Google Review invitation. Four weekly/monthly sales and reservation PDF reports are downloadable from the admin panel.
 
 11. Phase 9 — Testing
 
@@ -415,10 +388,10 @@ Reservation flow
 ├── Concurrent booking (race condition) — only one succeeds
 └── 15-minute hold: slot freed after expiry
 
-Feedback
-├── Feedback accessible only via signed link
-├── Feedback blocked if order/reservation not completed
-└── Feedback stores correctly
+External Google Review invitation
+├── Sent only after the first completed transition
+├── Uses the configured external destination
+└── Does not create local review storage or a signed review route
 
 Admin authorization
 ├── Unauthenticated request → redirect to login
@@ -431,10 +404,10 @@ Guest journeys:
 
 text
 Browse menu → search → filter → add to cart → checkout → FIUU payment → order confirmation → receipt
-Table-only reservation → availability → select table → confirm → QR → email
-Table + food reservation → availability → pre-order food → FIUU payment → confirm → QR
+Table-only reservation → availability → select table → confirm → reservation number → email
+Table + food reservation → availability → pre-order food → FIUU payment → confirm → reservation number
 Cancel reservation via signed link
-Submit feedback via signed feedback link → Google Review link shown
+Completed order or reservation → optional external Google Review invitation email
 Contact Us → fill form → submit → success message
 Rasa AI → enter preferences → receive recommendations → add to cart
 
@@ -446,13 +419,10 @@ View orders → update order status
 View reservations → confirm / cancel / complete
 Manage tables → toggle maintenance
 Add / edit / deactivate menu item
-View feedback
 Generate weekly sales report → PDF downloaded
 Generate monthly sales report → PDF downloaded
 Generate weekly reservations report → PDF downloaded
 Generate monthly reservations report → PDF downloaded
-Generate weekly feedback report → PDF downloaded
-Generate monthly feedback report → PDF downloaded
 
 Edge cases:
 
@@ -588,7 +558,7 @@ Production smoke tests
 ├── Admin login works
 ├── Contact Us form sends email
 ├── Rasa AI returns recommendations
-├── Signed links work (receipt, cancellation, feedback)
+├── Signed links work (receipt, cancellation)
 └── HTTPS enforced
 Deliverable
 
@@ -601,9 +571,9 @@ M2	All migrations run, models defined with relationships, seeders produce valid 
 M3	Guest can browse menu, manage cart, reach checkout, and submit a contact enquiry
 M4	Guest can check table availability and create both reservation types
 M5	FIUU payment flows work for orders and reservations; ReceiptService generates PDFs
-M6	Rasa AI returns recommendations on both surfaces; all five Mailables sending
-M7	Authenticated administrator can manage orders, reservations, tables, menu, and feedback
-M8	QR codes generated, feedback flow complete, Google Review redirect works, all 6 report PDFs downloadable
+M6	Rasa AI returns recommendations on its dedicated page; all five Mailables sending
+M7	Authenticated administrator can manage orders, reservations, tables, and menu data
+M8	Reservation numbers displayed consistently, optional Google Review invitations work, all 4 report PDFs downloadable
 M9	Laravel tests pass, Playwright journeys pass, Strix findings resolved
 M10	Pre-deployment security checklist complete — every item passes
 M11	Application live in production, HTTPS enforced, smoke tests pass
@@ -650,3 +620,23 @@ Deployment (Phase 11)
 Production Verification
 
 PRD defines what is required. App Flow defines how users move through it. UI/UX Brief defines the experience. Backend Design defines the server implementation. Engineering Plan defines the build order and verification criteria. The documents form a dependency chain — each one is grounded in the ones before it.
+
+---
+
+## REC-02B — Delivery and verification boundary
+
+Implement normalized controlled allergen vocabulary and per-item assessments without inferred menu facts. Test admin authorization, provenance, independent unknown statuses, unique/FK/CHECK constraints, transactional rollback, stale forms, relevant-edit invalidation, manual supplier/preparation invalidation, no automatic expiry and preservation of Rasa AI allergy blocking.
+
+Run focused tests only through the guarded le_miting_test bootstrap. Do not migrate development/demo, populate restaurant assessments, change catalog records or deploy to the isolated demo in this milestone. Preserve the demo migration guard's original chain fingerprint; new migrations are not implicitly approved for demo.
+
+REC-02C is approved as a constrained customer-facing exclusion feature. A current documented admin assessment governs when a row exists; deterministic menu-text analysis is used only when no row exists. Menu wording is not restaurant verification and does not establish ingredient or shared-kitchen safety. No allergen-free or allergy-safe promises are permitted.
+
+## REC-02C — Approved customer-facing exclusions
+
+Scope: on `/ai/recommendations`, accept `preferences_text` (optional, maximum 300 characters) and/or controlled `excluded_allergens[]` for the ten canonical codes (`peanut`, `tree_nuts`, `milk`, `egg`, `soy`, `wheat_gluten`, `fish`, `crustacean_shellfish`, `molluscs`, `sesame`); at least one non-blank text value or valid code is required. Legacy structured preference selectors remain prohibited. Map explicit supported English/Malay terms to codes and merge/deduplicate with checkbox values. Generic/unspecified allergy or intolerance, and unmapped allergen/intolerance requests, fail closed with a staff-confirmation notice and zero provider calls.
+
+Eligibility is enforced before and after provider selection. Candidates are available menu items in active categories. For each requested code, a present admin assessment is authoritative and qualifies only when current for the item, `reviewed_absent` for recipe status, `reviewed_no_known_risk` for cross-contact status, and complete in reviewer, UTC timestamp, and evidence. Any stale, invalidated, incomplete, unknown, contains, or possible assessment excludes the item. If there is no row for that item/code, deterministic English/Malay keyword matching on name and description excludes positive matches and ignores explicit negated phrases; a non-match qualifies only for this limited menu check. Revalidate returned provider IDs with the same rule. Empty candidates mean zero provider calls.
+
+Results must include the shared-kitchen caution and tell customers to inform staff before ordering. Show `Reviewed: [allergen] not listed in recipe · No known cross-contact risk` for a qualifying current row and `Menu check: [allergen] not listed in dish name or description · Confirm with staff` when no row exists. Menu text does not verify ingredients or cross-contact and must not be presented as assessment provenance. Do not claim “allergy-safe”, “allergen-free”, “100% safe”, or equivalent in UI, badges, or provider prompts.
+
+Acceptance evidence for REC-02C: focused tests prove input bounds/combination, canonical code validation, English/Malay mapping and deduplication, generic/unmapped fail-closed behavior with zero provider calls, no-row menu matching and negation handling, current-assessment overrides, stale/invalidation exclusion, pre-provider eligibility, post-provider revalidation, zero-candidate behavior, truthful UI badges/caution, and preservation of non-allergy recommendations. Use guarded test data and do not fabricate restaurant assessments. Empty assessment tables are supported through the menu-text fallback; admin review rows remain authoritative when present. The isolated demo migration chain remains separately governed and is not implicitly authorized by this specification approval.

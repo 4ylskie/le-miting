@@ -7,13 +7,14 @@ use App\Http\Requests\Admin\StoreMenuCategoryRequest;
 use App\Http\Requests\Admin\UpdateMenuCategoryRequest;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
 class MenuCategoryController extends Controller
 {
     public function index()
     {
-        $categories = MenuCategory::withCount('menuItems')->orderBy('sort_order')->orderBy('name')->get();
+        $categories = MenuCategory::withCount($this->itemCounts())->orderBy('sort_order')->orderBy('name')->get();
 
         return view('admin.menu.categories.index', [
             'categories' => $categories,
@@ -37,6 +38,8 @@ class MenuCategoryController extends Controller
 
     public function edit(MenuCategory $category)
     {
+        $category->loadCount($this->itemCounts());
+
         return view('admin.menu.categories.form', [
             'category' => $category,
         ]);
@@ -57,7 +60,7 @@ class MenuCategoryController extends Controller
         if ($itemsCount > 0) {
             throw ValidationException::withMessages([
                 'category' => sprintf(
-                    'Category “%s” still has %d item%s. Reassign or deactivate those items before deleting the category.',
+                    'Category “%s” still has %d assigned menu item%s. Archived items still reference the category; making an item unavailable or removing it from the public menu does not clear that reference.',
                     $category->name,
                     $itemsCount,
                     $itemsCount === 1 ? '' : 's',
@@ -69,5 +72,15 @@ class MenuCategoryController extends Controller
 
         return redirect()->route('admin.menu.categories.index')
             ->with('status', 'Category “'.$category->name.'” deleted.');
+    }
+
+    /** @return array<int|string, mixed> */
+    private function itemCounts(): array
+    {
+        return [
+            'menuItems as current_items_count',
+            'menuItems as archived_items_count' => fn (Builder $query) => $query->onlyTrashed(),
+            'menuItems as total_assigned_count' => fn (Builder $query) => $query->withTrashed(),
+        ];
     }
 }

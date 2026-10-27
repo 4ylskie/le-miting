@@ -15,8 +15,8 @@
         <div class="row"><dt>Table</dt><dd>Table {{ $reservation->table->table_number }} (seats {{ $reservation->table->capacity }})</dd></div>
     </dl>
 
-    @if ($reservation->reservation_type === 'table_and_food' && $reservation->reservationFoods->count() > 0)
-        <h3 style="font-size:15px; margin:20px 0 8px;">Pre-ordered Food (paid with FIUU)</h3>
+    @if (($receiptUrl ?? null) && $reservation->reservationFoods->count() > 0)
+        <h3 class="email-heading">Pre-ordered Food (paid online)</h3>
         <dl>
             @foreach ($reservation->reservationFoods as $food)
                 <div class="row">
@@ -32,13 +32,8 @@
         </div>
     @endif
 
-    <div style="text-align:center; margin:20px 0;">
-        <img src="{{ $qrDataUri }}" alt="QR code for check-in" width="180" height="180" style="border-radius:10px;">
-        <p class="muted">Show this QR code at the restaurant entrance to check in.</p>
-    </div>
-
     <div>
         <a class="btn" href="{{ $cancelUrl }}">Cancel this reservation</a>
     </div>
-    <p class="muted" style="margin-top:8px;">The cancellation link expires in 24 hours.</p>
+    <p class="muted mt-8">The cancellation link expires in 24 hours.</p>
 @endsection

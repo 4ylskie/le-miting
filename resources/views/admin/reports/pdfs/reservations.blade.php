@@ -1,9 +1,11 @@
 @include('admin.reports.pdfs.report-head')
+@inject('businessTime', 'App\Services\BusinessTime')
 
 <h2>{{ ucfirst($period) }} Reservation Report</h2>
 <p class="muted">
-    Reporting period: {{ $periodLabel }} · {{ $from->format('d M Y') }} to {{ $generatedAt->format('d M Y') }}
-    · Generated {{ $generatedAt->format('d M Y, g:i A') }}
+    Reporting period: {{ $periodLabel }} · {{ $businessTime->local($from)->format('d M Y, H:i:s') }} MYT (inclusive)
+    to {{ $businessTime->local($generatedAt)->format('d M Y, H:i:s') }} MYT (exclusive)
+    · Generated {{ $businessTime->local($generatedAt)->format('d M Y, H:i:s') }} MYT
 </p>
 
 <div class="summary">
@@ -19,14 +21,14 @@
         <thead>
             <tr>
                 <th>Time slot</th>
-                <th style="text-align:right;">Reservations</th>
+                <th class="text-right">Reservations</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($data['popular_times'] as $slot)
                 <tr>
                     <td>{{ \Carbon\Carbon::createFromFormat('H:i', $slot->time_slot)->format('g:i A') }}</td>
-                    <td style="text-align:right;">{{ number_format($slot->reservation_count) }}</td>
+                    <td class="text-right">{{ number_format($slot->reservation_count) }}</td>
                 </tr>
             @endforeach
         </tbody>

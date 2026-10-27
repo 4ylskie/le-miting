@@ -17,7 +17,7 @@ class StoreOrderRequest extends FormRequest
             'customer_name' => ['required', 'string', 'max:100'],
             'customer_email' => ['required', 'email', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:20'],
-            'order_type' => ['required', 'in:dine_in,takeaway'],
+            'order_type' => ['required', 'in:dine-in,takeaway'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

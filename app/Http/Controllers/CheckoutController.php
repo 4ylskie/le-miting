@@ -4,39 +4,45 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Payment;
+use App\Services\CartService;
 use App\Services\OrderService;
 use App\Services\Payments\PaymentProcessor;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
     public function __construct(
         private OrderService $orders,
         private PaymentProcessor $payments,
+        private CartService $carts,
     ) {}
 
-    public function create(Request $request)
+    public function create(Request $request): View|RedirectResponse
     {
-        $cart = session()->get('cart', ['items' => []]);
-
-        $items = collect($cart['items'] ?? [])->values();
+        $summary = $this->carts->orderSummary();
+        $items = $summary['items'];
 
         if ($items->isEmpty()) {
             return redirect()->route('cart.index')
                 ->with('error', 'Your cart is empty. Add some dishes before checking out.');
         }
 
-        $total = $items->reduce(fn ($carry, $item) => $carry + ($item['unit_price'] * $item['quantity']), 0.0);
+        if ($summary['has_unavailable_items']) {
+            return redirect()->route('cart.index')
+                ->with('error', 'Remove unavailable items from your cart before checking out.');
+        }
 
         return view('customer.checkout.create', [
             'items' => $items,
-            'total' => $total,
+            'total' => $summary['total'],
         ]);
     }
 
-    public function store(StoreOrderRequest $request)
+    public function store(StoreOrderRequest $request): RedirectResponse
     {
         try {
             $order = $this->orders->createFromCart($request->validated());

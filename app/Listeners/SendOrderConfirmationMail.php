@@ -12,6 +12,10 @@ class SendOrderConfirmationMail
     {
         $order = $event->order->loadMissing('orderItems', 'payment');
 
-        Mail::to($order->customer_email)->send(new OrderConfirmationMail($order));
+        try {
+            Mail::to($order->customer_email)->send(new OrderConfirmationMail($order));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 }

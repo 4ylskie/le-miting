@@ -14,7 +14,7 @@ class ReservationCancellationMail extends Mailable
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public Reservation $reservation) {}
+    public function __construct(public Reservation $reservation, public bool $hasVerifiedPaidPayment) {}
 
     public function envelope(): Envelope
     {

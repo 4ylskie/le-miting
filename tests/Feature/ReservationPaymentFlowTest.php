@@ -4,6 +4,7 @@ use App\Models\MenuItem;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\Table;
+use App\Services\Payments\MockPaymentService;
 use Carbon\Carbon;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,7 +21,7 @@ test('a table_and_food reservation with selected dishes creates a pending paymen
         'reservation_type' => 'table_and_food',
         'table_id' => $table->id,
         'reservation_date' => Carbon::tomorrow()->format('Y-m-d'),
-        'reservation_time' => '19:00',
+        'reservation_time' => '11:00',
         'guest_count' => 2,
         'customer_name' => 'Aida',
         'customer_email' => 'aida@example.com',
@@ -53,7 +54,7 @@ test('the food selection form submits the selected dish id', function () {
     $this->get(route('reservation.availability', [
         'reservation_type' => 'table_and_food',
         'reservation_date' => Carbon::tomorrow()->format('Y-m-d'),
-        'reservation_time' => '19:00',
+        'reservation_time' => '11:00',
         'guest_count' => 2,
     ]))
         ->assertOk()
@@ -70,7 +71,7 @@ test('submitting food quantities without the dish id is rejected', function () {
         'reservation_type' => 'table_and_food',
         'table_id' => $table->id,
         'reservation_date' => Carbon::tomorrow()->format('Y-m-d'),
-        'reservation_time' => '19:00',
+        'reservation_time' => '11:00',
         'guest_count' => 2,
         'customer_name' => 'Aida',
         'customer_email' => 'aida@example.com',
@@ -93,12 +94,12 @@ test('the availability page carries the booking details into the store form', fu
     $this->get(route('reservation.availability', [
         'reservation_type' => 'table_and_food',
         'reservation_date' => $date,
-        'reservation_time' => '19:00',
+        'reservation_time' => '11:00',
         'guest_count' => 2,
     ]))
         ->assertOk()
         ->assertSee('name="reservation_date" value="'.$date.'"', false)
-        ->assertSee('name="reservation_time" value="19:00"', false)
+        ->assertSee('name="reservation_time" value="11:00"', false)
         ->assertSee('name="guest_count" value="2"', false);
 });
 
@@ -114,7 +115,7 @@ test('continue to payment completes a table_and_food reservation through the moc
         'reservation_type' => 'table_and_food',
         'table_id' => $table->id,
         'reservation_date' => Carbon::tomorrow()->format('Y-m-d'),
-        'reservation_time' => '19:00',
+        'reservation_time' => '11:00',
         'guest_count' => 2,
         'customer_name' => 'Aida',
         'customer_email' => 'aida@example.com',
@@ -129,23 +130,14 @@ test('continue to payment completes a table_and_food reservation through the moc
     $storeResponse->assertRedirect(route('payment.create', $payment));
 
     $gatewayResponse = $this->get(route('payment.create', $payment));
-    $gatewayResponse->assertRedirect(route('payment.gateway', $payment));
+    $gatewayResponse->assertRedirect();
 
-    $this->get(route('payment.gateway', $payment))
+    $this->get($gatewayResponse->headers->get('Location'))
         ->assertOk()
         ->assertSee($payment->provider_reference);
 
-    $amount = number_format((float) $payment->amount, 2, '.', '');
-    $secret = (string) config('payment.fiuu.secret_key');
-    $signature = hash_hmac('sha256', $secret.$payment->provider_reference.$amount.'paid'.'MYR', $secret);
-
-    $this->post(route('payment.callback'), [
-        'reference' => $payment->provider_reference,
-        'amount' => $amount,
-        'status' => 'paid',
-        'currency' => 'MYR',
-        'signature' => $signature,
-    ])->assertRedirect(route('reservation.confirmation', $payment->reservation));
+    $this->post(route('payment.callback'), app(MockPaymentService::class)->callbackPayload($payment, 'success'))
+        ->assertRedirect();
 
     expect($payment->refresh()->status)->toBe('paid');
     expect($payment->reservation->status)->toBe('confirmed');

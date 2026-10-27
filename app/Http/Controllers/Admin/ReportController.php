@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\ReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Date;
 
 class ReportController extends Controller
 {
@@ -18,40 +18,32 @@ class ReportController extends Controller
 
     public function salesWeekly()
     {
-        return $this->download('sales', 'weekly', now()->subDays(7));
+        return $this->download('sales', 'weekly', 7);
     }
 
     public function salesMonthly()
     {
-        return $this->download('sales', 'monthly', now()->subDays(30));
+        return $this->download('sales', 'monthly', 30);
     }
 
     public function reservationsWeekly()
     {
-        return $this->download('reservations', 'weekly', now()->subDays(7));
+        return $this->download('reservations', 'weekly', 7);
     }
 
     public function reservationsMonthly()
     {
-        return $this->download('reservations', 'monthly', now()->subDays(30));
+        return $this->download('reservations', 'monthly', 30);
     }
 
-    public function feedbackWeekly()
+    private function download(string $type, string $period, int $days)
     {
-        return $this->download('feedback', 'weekly', now()->subDays(7));
-    }
+        $generatedAt = Date::now('UTC')->toImmutable()->startOfSecond();
+        $from = $generatedAt->subHours($days * 24);
 
-    public function feedbackMonthly()
-    {
-        return $this->download('feedback', 'monthly', now()->subDays(30));
-    }
-
-    private function download(string $type, string $period, CarbonInterface $from)
-    {
         $data = match ($type) {
-            'sales' => $this->reports->sales($from),
-            'reservations' => $this->reports->reservations($from),
-            'feedback' => $this->reports->feedback($from),
+            'sales' => $this->reports->sales($from, $generatedAt),
+            'reservations' => $this->reports->reservations($from, $generatedAt),
         };
 
         $periodLabel = $period === 'weekly' ? 'Last 7 days' : 'Last 30 days';
@@ -60,7 +52,7 @@ class ReportController extends Controller
             'period' => $period,
             'periodLabel' => $periodLabel,
             'from' => $from,
-            'generatedAt' => now(),
+            'generatedAt' => $generatedAt,
             'data' => $data,
         ])->setPaper('a4');
 

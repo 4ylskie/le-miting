@@ -3,113 +3,70 @@
 @section('title', $item->name.' — Le Miting')
 
 @section('content')
-    <section class="py-12" aria-label="Dish details">
-        <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-            <nav class="text-sm text-text-muted" aria-label="Breadcrumb">
-                <a href="{{ route('menu.index') }}" class="hover:text-brand-700">Menu</a>
-                <span class="mx-2" aria-hidden="true">/</span>
-                <a href="{{ route('menu.index', ['category' => $item->category->slug]) }}" class="hover:text-brand-700">
-                    {{ $item->category->name }}
-                </a>
-            </nav>
+    <section class="lm-container lm-section" aria-labelledby="dish-heading">
+        <nav class="lm-actions lm-meta mb-(--lm-space-xl)" aria-label="Breadcrumb">
+            <a href="{{ route('menu.index') }}" class="lm-button lm-button--quiet">Menu</a>
+            @if ($item->category)
+                <span aria-hidden="true">/</span>
+                <a href="{{ route('menu.index', ['category' => $item->category->slug]) }}" class="lm-button lm-button--quiet">{{ $item->category->name }}</a>
+            @endif
+        </nav>
 
-            <div class="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
-                <div class="flex h-80 items-center justify-center rounded-2xl bg-brand-50 text-8xl" aria-hidden="true">
-                    @if ($item->image_path)
-                        <img src="{{ asset('storage/' . $item->image_path) }}" alt="{{ $item->name }}" class="h-full w-full object-cover rounded-2xl">
-                    @else
-                        🍽️
-                    @endif
-                </div>
+        @if (session('success'))
+            <p class="lm-alert mb-(--lm-space-lg)" data-state="success" role="status">{{ session('success') }}</p>
+        @endif
+        @if ($errors->any())
+            <div class="lm-alert mb-(--lm-space-lg)" data-state="error" role="alert">
+                @foreach ($errors->all() as $message)
+                    <p>{{ $message }}</p>
+                @endforeach
+            </div>
+        @endif
 
-                <div>
-                    <div class="flex items-start justify-between gap-4">
-                        <h1 class="text-3xl font-bold text-brand-800">{{ $item->name }}</h1>
-                        <span class="shrink-0 text-2xl font-bold text-primary">RM {{ number_format($item->price, 2) }}</span>
-                    </div>
+        <div @class(['grid items-start gap-(--lm-space-xl)', 'lg:grid-cols-2' => (bool) $item->image_path, 'max-w-3xl' => ! $item->image_path])>
+            <x-menu-media :item="$item" :eager="true" />
+            <div class="lm-stack min-w-0">
+                @if ($item->category)
+                    <p class="lm-eyebrow wrap-anywhere">{{ $item->category->name }}</p>
+                @endif
+                <h1 id="dish-heading" class="lm-h1 wrap-anywhere">{{ $item->name }}</h1>
+                <p class="lm-h3 tabular-nums">RM {{ number_format($item->price, 2) }}</p>
+                @if ($item->description)
+                    <p class="lm-body lm-muted wrap-anywhere">{{ $item->description }}</p>
+                @endif
 
-                    <p class="mt-4 text-base leading-relaxed text-text-muted">{{ $item->description }}</p>
+                <x-menu-metadata :item="$item" :detail="true" />
 
-                    <dl class="mt-6 grid grid-cols-2 gap-4 text-sm" aria-label="Dish attributes">
-                        @if ($item->spice_level)
-                            <div>
-                                <dt class="font-semibold text-text-muted">Spice Level</dt>
-                                <dd class="mt-1 text-text">{{ $item->spice_level }}</dd>
-                            </div>
-                        @endif
-                        @if ($item->protein_type)
-                            <div>
-                                <dt class="font-semibold text-text-muted">Protein</dt>
-                                <dd class="mt-1 text-text">{{ $item->protein_type }}</dd>
-                            </div>
-                        @endif
-                        @if ($item->dietary_type)
-                            <div>
-                                <dt class="font-semibold text-text-muted">Dietary</dt>
-                                <dd class="mt-1 text-text">{{ $item->dietary_type }}</dd>
-                            </div>
-                        @endif
-                        @if ($item->flavor_profile)
-                            <div>
-                                <dt class="font-semibold text-text-muted">Flavour</dt>
-                                <dd class="mt-1 text-text">{{ $item->flavor_profile }}</dd>
-                            </div>
-                        @endif
-                    </dl>
-
-                    @if ($item->is_available)
-                        <form method="POST" action="{{ route('cart.add') }}" class="mt-8 flex items-center gap-4">
-                            @csrf
-                            <input type="hidden" name="menu_item_id" value="{{ $item->id }}">
-                            <label for="quantity" class="sr-only">Quantity</label>
-                            <select
-                                id="quantity"
-                                name="quantity"
-                                class="rounded-md border border-brand-200 bg-white px-4 py-3 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                            >
+                @if ($item->is_available)
+                    <form method="POST" action="{{ route('cart.add') }}" class="lm-divider flex flex-wrap items-end gap-(--lm-space-sm) pt-(--lm-space-lg)">
+                        @csrf
+                        <input type="hidden" name="menu_item_id" value="{{ $item->id }}">
+                        <div class="lm-field w-24">
+                            <label for="quantity" class="lm-label">Quantity</label>
+                            <select id="quantity" name="quantity" class="lm-control" @if ($errors->has('quantity')) aria-invalid="true" aria-describedby="quantity-error" @endif>
                                 @for ($i = 1; $i <= 10; $i++)
                                     <option value="{{ $i }}">{{ $i }}</option>
                                 @endfor
                             </select>
-                            <button
-                                type="submit"
-                                class="inline-flex items-center gap-2 rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            >
-                                Add to Cart
-                            </button>
-                        </form>
-                    @else
-                        <p class="mt-8 rounded-md bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                            This dish is currently unavailable.
-                        </p>
-                    @endif
-                </div>
+                        </div>
+                        <button type="submit" class="lm-button">Add to Cart</button>
+                        @error('quantity')
+                            <p id="quantity-error" class="lm-error w-full">{{ $message }}</p>
+                        @enderror
+                    </form>
+                @else
+                    <p class="lm-status self-start" data-state="unavailable">This dish is currently unavailable.</p>
+                @endif
             </div>
-
-            @if ($related->count() > 0)
-                <div class="mt-16" aria-label="You may also like">
-                    <h2 class="text-2xl font-bold text-brand-800">You May Also Like</h2>
-                    <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
-                        @foreach ($related as $item)
-                            <a
-                                href="{{ route('menu.show', $item) }}"
-                                class="rounded-xl border border-brand-100 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
-                            >
-                                <div class="flex h-28 items-center justify-center rounded-lg bg-brand-50 text-4xl" aria-hidden="true">
-                                    {{ $item->image_path ? '' : '🍽️' }}
-                                    @if ($item->image_path)
-                                        <img src="{{ asset('storage/' . $item->image_path) }}" alt="{{ $item->name }}" class="h-full w-full object-cover rounded-lg">
-                                    @endif
-                                </div>
-                                <div class="mt-3 flex items-center justify-between">
-                                    <h3 class="font-semibold text-text">{{ $item->name }}</h3>
-                                    <span class="shrink-0 font-semibold text-primary">RM {{ number_format($item->price, 2) }}</span>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
     </section>
+
+    @if ($related->isNotEmpty())
+        <section class="lm-container lm-section lm-divider" aria-labelledby="related-heading">
+            <h2 id="related-heading" class="lm-h2 mb-(--lm-space-lg)">You May Also Like</h2>
+            @foreach ($related as $relatedItem)
+                <x-menu-item :item="$relatedItem" heading="h3" :orderable="false" />
+            @endforeach
+        </section>
+    @endif
 @endsection

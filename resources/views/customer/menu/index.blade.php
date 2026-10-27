@@ -3,163 +3,92 @@
 @section('title', 'Menu — Le Miting')
 
 @section('content')
-    <section class="bg-brand-950 text-white py-14" aria-label="Menu">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold md:text-4xl">Our Menu</h1>
-            <p class="mt-3 max-w-2xl text-brand-100">
-                Authentic Malaysian dishes, prepared fresh. Search, filter, and add your favourites to the cart.
-            </p>
-        </div>
-    </section>
+    <header class="lm-container lm-section">
+        <p class="lm-eyebrow mb-(--lm-space-md)">Le Miting</p>
+        <h1 class="lm-h1">Our Menu</h1>
+        <p class="lm-body lm-muted mt-(--lm-space-md) max-w-xl">Find a dish for today. Browse by category, explore your preferences, or search the menu.</p>
+    </header>
 
-    <section class="py-10" aria-label="Menu search and filters">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div class="flex flex-wrap gap-2" role="tablist" aria-label="Menu categories">
-                    <a
-                        href="{{ route('menu.index') }}"
-                        class="rounded-full px-4 py-2 text-sm font-medium {{ ! request()->filled('category') ? 'bg-primary text-white' : 'border border-brand-200 bg-white text-brand-700 hover:bg-brand-50' }}"
-                        @if (! request()->filled('category')) aria-current="page" @endif
-                    >
-                        All
-                    </a>
-                    @foreach ($categories as $category)
-                        <a
-                            href="{{ route('menu.index', ['category' => $category->slug] + request()->except(['category', 'page'])) }}"
-                            class="rounded-full px-4 py-2 text-sm font-medium {{ request()->input('category') === $category->slug ? 'bg-primary text-white' : 'border border-brand-200 bg-white text-brand-700 hover:bg-brand-50' }}"
-                            @if (request()->input('category') === $category->slug) aria-current="page" @endif
-                        >
-                            {{ $category->name }}
-                        </a>
-                    @endforeach
+    <section class="lm-container" aria-label="Menu search and filters">
+        <div class="lm-divider grid gap-(--lm-space-lg) py-(--lm-space-lg) lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <nav class="flex flex-wrap items-start gap-x-(--lm-space-md) gap-y-(--lm-space-xs)" aria-label="Menu categories">
+                <a href="{{ route('menu.index') }}" class="lm-meta inline-flex min-h-(--lm-touch) min-w-(--lm-touch) items-center underline-offset-8 hover:underline aria-[current=page]:underline aria-[current=page]:font-semibold" @if (! request()->filled('category')) aria-current="page" @endif>All</a>
+                @foreach ($categories as $category)
+                    <a href="{{ route('menu.index', ['category' => $category->slug] + request()->except(['category', 'page'])) }}" class="lm-meta inline-flex min-h-(--lm-touch) min-w-(--lm-touch) items-center wrap-anywhere underline-offset-8 hover:underline aria-[current=page]:underline aria-[current=page]:font-semibold" @if (request()->input('category') === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>
+                @endforeach
+            </nav>
+            <form method="GET" action="{{ route('menu.index') }}" role="search" class="lm-field">
+                <label for="menu-search" class="lm-label">Search menu</label>
+                <div class="flex gap-(--lm-space-xs)">
+                    <input id="menu-search" type="search" name="q" value="{{ request()->input('q') }}" placeholder="Search dishes…" class="lm-control">
+                    <button type="submit" class="lm-button">Search</button>
                 </div>
+            </form>
+        </div>
 
-                <form method="GET" action="{{ route('menu.index') }}" class="flex items-center gap-2" role="search">
-                    <label for="menu-search" class="sr-only">Search menu</label>
-                    <input
-                        id="menu-search"
-                        type="search"
-                        name="q"
-                        value="{{ request()->input('q') }}"
-                        placeholder="Search dishes..."
-                        class="w-full sm:w-64 rounded-md border border-brand-200 bg-white px-4 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                    <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
-                        Search
-                    </button>
-                </form>
-            </div>
-
-            <div class="mt-6 space-y-4" aria-label="Menu filters">
-                @php
-                    $filterGroups = [
-                        'spice' => ['label' => 'Spice Level', 'options' => $filters['spiceLevels']],
-                        'protein' => ['label' => 'Protein', 'options' => $filters['proteinTypes']],
-                        'dietary' => ['label' => 'Dietary', 'options' => $filters['dietaryTypes']],
-                        'flavor' => ['label' => 'Flavour', 'options' => $filters['flavorProfiles']],
-                    ];
-                @endphp
-
-                @foreach ($filterGroups as $key => $group)
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <span class="text-xs font-semibold uppercase tracking-wide text-text-muted sm:w-32 sm:shrink-0">{{ $group['label'] }}:</span>
-                        <div class="flex flex-wrap gap-1">
+        @php
+            $filterGroups = [
+                'spice' => ['field' => 'spice_level', 'label' => 'Spice Level', 'options' => $filters['spiceLevels']],
+                'protein' => ['field' => 'protein_type', 'label' => 'Protein', 'options' => $filters['proteinTypes']],
+                'dietary' => ['field' => 'dietary_type', 'label' => 'Dietary', 'options' => $filters['dietaryTypes']],
+                'flavor' => ['field' => 'flavor_profile', 'label' => 'Flavour', 'options' => $filters['flavorProfiles']],
+            ];
+        @endphp
+        <div class="lm-divider grid gap-(--lm-space-md) py-(--lm-space-lg) md:grid-cols-2">
+            @foreach ($filterGroups as $key => $group)
+                @if ($group['options']->isNotEmpty())
+                    <div class="min-w-0">
+                        <h2 id="filter-{{ $key }}" class="lm-label">{{ $group['label'] }}</h2>
+                        <nav class="flex flex-wrap gap-x-(--lm-space-md)" aria-labelledby="filter-{{ $key }}">
                             @foreach ($group['options'] as $option)
                                 @php
                                     $isActive = request()->input($key) === $option;
                                     $query = request()->except([$key, 'page']);
-                                    $href = $isActive
-                                        ? route('menu.index', $query)
-                                        : route('menu.index', $query + [$key => $option]);
+                                    $href = $isActive ? route('menu.index', $query) : route('menu.index', $query + [$key => $option]);
                                 @endphp
-                                <a
-                                    href="{{ $href }}"
-                                    class="rounded-full px-3 py-1 text-xs font-medium {{ $isActive ? 'bg-accent text-white' : 'border border-brand-200 bg-white text-text-muted hover:bg-brand-50' }}"
-                                    @if ($isActive) aria-current="true" @endif
-                                >
-                                    {{ $option }}
+                                <a href="{{ $href }}" class="lm-meta inline-flex min-h-(--lm-touch) items-center wrap-anywhere underline-offset-8 hover:underline aria-[current=true]:underline aria-[current=true]:font-semibold" @if ($isActive) aria-current="true" @endif>
+                                    {{ \App\Services\Ai\AiRecommendationOptions::label($group['field'], $option) }}@if ($isActive)<span class="sr-only"> — selected; remove filter</span>@endif
                                 </a>
                             @endforeach
-                        </div>
+                        </nav>
                     </div>
-                @endforeach
-
-                @if (request()->except('page'))
-                    <a href="{{ route('menu.index') }}" class="inline-block text-sm font-semibold text-primary hover:text-primary-dark">
-                        Clear all filters
-                    </a>
                 @endif
-            </div>
+            @endforeach
         </div>
+        @if (request()->except('page'))
+            <a href="{{ route('menu.index') }}" class="lm-button lm-button--quiet mb-(--lm-space-lg)">Clear all filters</a>
+        @endif
     </section>
 
-    <section class="pb-16" aria-label="Menu items">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            @if ($items->count() > 0)
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ($items as $item)
-                        <article class="flex flex-col rounded-xl border border-brand-100 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-                            <div class="flex h-40 items-center justify-center rounded-lg bg-brand-50 text-6xl" aria-hidden="true">
-                                {{ $item->image_path ? '' : '🍽️' }}
-                                @if ($item->image_path)
-                                    <img src="{{ asset('storage/' . $item->image_path) }}" alt="{{ $item->name }}" class="h-full w-full object-cover rounded-lg">
-                                @endif
-                            </div>
-                            <div class="mt-4 flex flex-1 flex-col">
-                                <div class="flex items-start justify-between gap-3">
-                                    <h2 class="font-semibold text-text">{{ $item->name }}</h2>
-                                    <span class="shrink-0 font-bold text-primary">RM {{ number_format($item->price, 2) }}</span>
-                                </div>
-                                <p class="mt-1 text-sm text-text-muted line-clamp-2">{{ $item->description }}</p>
-                                <div class="mt-3 flex flex-wrap gap-1.5 text-xs text-text-muted" aria-label="Item attributes">
-                                    @if ($item->spice_level)
-                                        <span class="rounded-full bg-brand-50 px-2 py-0.5">{{ $item->spice_level }}</span>
-                                    @endif
-                                    @if ($item->dietary_type)
-                                        <span class="rounded-full bg-brand-50 px-2 py-0.5">{{ $item->dietary_type }}</span>
-                                    @endif
-                                    @if (! $item->is_available)
-                                        <span class="rounded-full bg-red-50 px-2 py-0.5 text-red-700">Sold out</span>
-                                    @endif
-                                </div>
-                                <div class="mt-4 flex gap-2">
-                                    <form method="POST" action="{{ route('cart.add') }}" class="flex-1">
-                                        @csrf
-                                        <input type="hidden" name="menu_item_id" value="{{ $item->id }}">
-                                        <input type="hidden" name="quantity" value="1">
-                                        <button
-                                            type="submit"
-                                            class="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                                            @if (! $item->is_available) disabled class="w-full rounded-md bg-text-muted px-4 py-2 text-sm font-semibold text-white cursor-not-allowed" @endif
-                                        >
-                                            Add to Cart
-                                        </button>
-                                    </form>
-                                    <a
-                                        href="{{ route('menu.show', $item) }}"
-                                        class="rounded-md border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 focus:outline-none focus:ring-2 focus:ring-brand-300"
-                                    >
-                                        View
-                                    </a>
-                                </div>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-
-                <div class="mt-10">
-                    {{ $items->links() }}
-                </div>
-            @else
-                <div class="py-16 text-center">
-                    <span class="text-5xl" aria-hidden="true">🍽️</span>
-                    <h2 class="mt-4 text-xl font-semibold text-text">No dishes match your search</h2>
-                    <p class="mt-2 text-text-muted">Try a different search term, or clear your filters to see the full menu.</p>
-                    <a href="{{ route('menu.index') }}" class="mt-6 inline-block rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary-dark">
-                        Clear search and filters
-                    </a>
-                </div>
+    <section class="lm-container pb-lm-section" aria-label="Menu items">
+        <div class="lm-actions mb-(--lm-space-lg)">
+            <p class="lm-meta lm-muted" role="status">
+                Showing {{ $items->firstItem() ?? 0 }}–{{ $items->lastItem() ?? 0 }} of {{ $items->total() }} {{ $hasFilters ? 'matching dishes' : 'dishes' }}.
+                Page {{ $items->currentPage() }} of {{ $items->lastPage() }}.
+            </p>
+            @if ($hasFilters)
+                <a href="{{ route('menu.index') }}" class="lm-button lm-button--secondary">View all {{ $catalogTotal }} dishes</a>
             @endif
         </div>
+        @if (session('success'))
+            <p class="lm-alert mb-(--lm-space-lg)" data-state="success" role="status">{{ session('success') }}</p>
+        @endif
+        @if ($errors->any())
+            <div class="lm-alert mb-(--lm-space-lg)" data-state="error" role="alert">
+                @foreach ($errors->all() as $message)
+                    <p>{{ $message }}</p>
+                @endforeach
+            </div>
+        @endif
+        @forelse ($items as $item)
+            <x-menu-item :item="$item" />
+        @empty
+            <div class="lm-empty lm-stack items-start">
+                <h2 class="lm-h2">No dishes match your search</h2>
+                <p class="lm-body lm-muted">Try a different search term, or clear your filters to see the full menu.</p>
+                <a href="{{ route('menu.index') }}" class="lm-button lm-button--secondary">Clear search and filters</a>
+            </div>
+        @endforelse
+        {{ $items->links('components.discovery-pagination') }}
     </section>
 @endsection

@@ -12,6 +12,10 @@ class SendReservationConfirmationMail
     {
         $reservation = $event->reservation->loadMissing('reservationFoods', 'table', 'payment');
 
-        Mail::to($reservation->customer_email)->send(new ReservationConfirmationMail($reservation));
+        try {
+            Mail::to($reservation->customer_email)->send(new ReservationConfirmationMail($reservation));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 }

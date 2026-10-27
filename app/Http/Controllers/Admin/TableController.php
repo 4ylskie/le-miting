@@ -7,22 +7,23 @@ use App\Http\Requests\Admin\StoreTableRequest;
 use App\Http\Requests\Admin\UpdateTableRequest;
 use App\Models\Reservation;
 use App\Models\Table;
-use Illuminate\Validation\ValidationException;
+use App\Services\BusinessTime;
+use App\Services\TableManagementService;
 
 class TableController extends Controller
 {
+    public function __construct(private TableManagementService $management, private BusinessTime $businessTime) {}
+
     public function index()
     {
-        $tables = Table::orderBy('table_number')->get();
-
-        $upcomingByTable = Reservation::whereIn('status', ['pending', 'confirmed'])
-            ->get()
-            ->filter(fn (Reservation $reservation) => $reservation->reservation_date_time->greaterThanOrEqualTo(now()))
-            ->groupBy('table_id')
-            ->map->count();
-
-        $tables->each(function (Table $table) use ($upcomingByTable): void {
-            $table->setAttribute('upcoming_count', $upcomingByTable->get($table->id, 0));
+        $tables = Table::with(['reservations' => fn ($query) => $query->whereIn('status', ['pending', 'confirmed', 'completed'])
+            ->with(['payment' => fn ($payment) => $payment->where('status', 'paid')])])
+            ->orderBy('table_number')->get();
+        $now = $this->businessTime->now();
+        $tables->each(function (Table $table) use ($now): void {
+            $reasons = $table->reservations->map(fn (Reservation $reservation) => $this->management->protectionReason($reservation, $now))->filter();
+            $table->setAttribute('protected_count', $reasons->count());
+            $table->setAttribute('protection_summary', $reasons->countBy());
         });
 
         return view('admin.tables.index', [
@@ -56,27 +57,9 @@ class TableController extends Controller
     {
         $data = $request->validated();
 
-        if ($data['status'] === 'maintenance' && $table->status !== 'maintenance') {
-            $this->assertNoUpcomingConfirmedReservations($table);
-        }
-
-        $table->update($data);
+        $this->management->update($table->id, $data);
 
         return redirect()->route('admin.tables.index')
             ->with('status', 'Table '.$data['table_number'].' updated.');
-    }
-
-    private function assertNoUpcomingConfirmedReservations(Table $table): void
-    {
-        $hasUpcoming = $table->reservations()
-            ->where('status', 'confirmed')
-            ->get()
-            ->contains(fn (Reservation $reservation) => $reservation->reservation_date_time->greaterThanOrEqualTo(now()));
-
-        if ($hasUpcoming) {
-            throw ValidationException::withMessages([
-                'status' => 'Table '.$table->table_number.' has upcoming confirmed reservations. Reassign or cancel those reservations before placing the table into maintenance.',
-            ]);
-        }
     }
 }

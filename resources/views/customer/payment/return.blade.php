@@ -1,21 +1,24 @@
 @extends('layouts.master')
 
-@section('title', 'Verifying Payment — Le Miting')
+@section('title', ($reservationUnconfirmed ?? false) ? 'Reservation Needs Review — Le Miting' : 'Verifying Payment — Le Miting')
 
 @section('content')
-    <section class="py-24" aria-label="Verifying payment">
-        <div class="mx-auto max-w-xl px-4 sm:px-6 lg:px-8 text-center">
-            <div class="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-brand-50" role="status" aria-label="Loading">
-                <span class="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-primary" aria-hidden="true"></span>
-            </div>
-            <h1 class="mt-6 text-2xl font-bold text-brand-800">Verifying your payment</h1>
-            <p class="mt-3 text-text-muted">
-                Your payment result will appear here once it is verified. Returning to this page does not mean your payment succeeded.
-            </p>
-            <p class="mt-4 text-sm text-text-muted">Reference: {{ $payment->provider_reference }}</p>
-            <a href="{{ route('home') }}" class="mt-8 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-white hover:bg-primary-dark">
-                Back to Home
-            </a>
+    <section class="lm-container lm-section" aria-labelledby="payment-heading">
+        <div class="lm-stack max-w-2xl">
+            @if ($reservationUnconfirmed ?? false)
+                <p class="lm-status self-start" data-state="pending" role="status">Manual review required</p>
+                <h1 id="payment-heading" class="lm-h1">Payment received, reservation not confirmed</h1>
+                <p class="lm-body lm-muted">Your payment was verified, but your table could not be secured. Please contact the restaurant with your payment reference for manual resolution. Do not make another payment for this reservation.</p>
+            @else
+                <p class="lm-status self-start" data-state="pending" role="status">Awaiting verification</p>
+                <h1 id="payment-heading" class="lm-h1">Verifying your payment</h1>
+                <p class="lm-body lm-muted">Your payment is awaiting verification. Returning to this page does not mean your payment succeeded.</p>
+            @endif
+            <dl class="lm-divider pt-(--lm-space-lg)">
+                <dt class="lm-label">Payment reference</dt>
+                <dd class="lm-body mt-(--lm-space-xs) wrap-anywhere">{{ $payment->provider_reference }}</dd>
+            </dl>
+            <a href="{{ route('home') }}" class="lm-button lm-button--secondary self-start">Back to Home</a>
         </div>
     </section>
 @endsection

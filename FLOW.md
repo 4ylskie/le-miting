@@ -29,23 +29,20 @@
         │       Checkout  Availability  │     │      │   │
         │          │          │   Orders  Reservations  │
         │          ▼          ▼      │     │      │   │
-        │        FIUU       FIUU   Menus  Tables  │   │
-        │          │          │              Feedback Reports
+        │        FIUU       FIUU   Menus  Tables  Reports
         │          ▼          ▼
         │       Confirm    Confirm
         │          │          │
         │          ▼          ▼
-        │       Receipt      QR
+        │       Receipt      Reservation number
         │          │          │
         │          └────┬─────┘
         │               ▼
         │           Completed
         │               │
         │               ▼
-        │           Feedback
-        │               │
-        │               ▼
-        │        Google Review
+        │   Optional Google Review
+        │       invitation email
         │
         ▼
     Contact Us
@@ -100,7 +97,7 @@ Review Cart
                    └── Takeaway
           │
           ▼
-       FIUU Payment
+       FIUU Payment (or signed demo mock gateway in development)
           │
           ├── Payment Successful
           │        │
@@ -122,7 +119,7 @@ Review Cart
                    ▼
               Payment Failure State
                    │
-                   └── Retry / Return to Checkout
+                   └── Retry the existing pending order / Return to Checkout
 ```
 
 ---
@@ -168,11 +165,11 @@ Check Table Availability
          (status: confirmed immediately — no payment required)
               │
               ▼
-         Generate QR Code
+         Assign readable reservation number
               │
               ▼
          Send Reservation Confirmation Email
-         (includes QR code + signed cancellation link)
+         (includes reservation number + signed cancellation link)
               │
               ▼
          Reservation Confirmation Page
@@ -220,12 +217,12 @@ Check Table Availability
               └── Phone
               │
               ▼
-         FIUU Payment
+         FIUU Payment (or signed demo mock gateway in development)
          (reservation created as pending — slot is held for 15 minutes)
               │
               ├── Payment Failed
               │        │
-              │        └── Payment Failure State → Retry
+              │        └── Payment Failure State → Retry the existing pending reservation
               │             Pending reservation hold expires after 15 minutes
               │             if payment is never completed
               │
@@ -235,11 +232,11 @@ Check Table Availability
                   Reservation status → confirmed
                        │
                        ▼
-                  Generate QR Code
+                  Confirm readable reservation number
                        │
                        ▼
                   Send Reservation Confirmation Email
-                  (includes QR code + signed cancellation link
+                  (includes reservation number + signed cancellation link
                    + receipt for food pre-order)
                        │
                        ▼
@@ -306,17 +303,6 @@ View Contact Information
      └── Operating Hours
      │
      ▼
-Optional: Rasa AI Widget
-     │
-     ├── Enter Preferences
-     │        │
-     │        ▼
-     │   AI returns recommendations
-     │   (mapped to real available menu items only)
-     │
-     └── Skip (widget does not block the page)
-     │
-     ▼
 Fill Contact Form
      │
      ├── Name (required)
@@ -348,53 +334,27 @@ Submission OK?
 
 ---
 
-## 6. Feedback Flow
+## 6. External Google Review Invitation
 
-Accessed via the signed feedback link sent after an order or reservation is marked `completed`.
-A customer cannot access the feedback form by navigating directly to a URL.
+When an order or reservation first reaches `completed`, Le Miting may send `GoogleReviewInvitationMail`.
 
 ```text
-FeedbackInvitationMail sent
-(order or reservation status → completed)
+Order / Reservation marked completed
           │
           ▼
-Customer opens signed feedback link
+GoogleReviewInvitationMail sent
           │
           ▼
-     Link valid?
+Customer optionally opens configured Google Review destination
           │
-          ├── No (expired or tampered)
-          │        │
-          │        └── Generic "link no longer valid" error
+          ▼
+Google receives and manages any submitted review
           │
-          └── Yes
-                   │
-                   ▼
-              Feedback Form
-                   │
-                   ├── Food Rating (1–5)
-                   ├── Service Rating (1–5)
-                   ├── Experience Rating (1–5)
-                   └── Comment (optional)
-                   │
-                   ▼
-              Submit Feedback
-                   │
-                   ▼
-              Feedback saved to database
-                   │
-                   ▼
-              Thank-you Page
-                   │
-                   ▼
-              Optional: "Review us on Google" link
-                   │
-                   └── Opens Google Review page in new tab
-                        (static link — no API, no data sent to Google)
-                   │
-                   ▼
-              End
+          ▼
+End
 ```
+
+There is no local feedback form, database record, signed feedback link, review submission, or Google API call. The external destination does not include internal transaction identifiers.
 
 ---
 
@@ -418,17 +378,16 @@ Authenticated?
               ├── Today's revenue
               ├── Pending orders
               ├── Pending reservations
-              ├── Available tables
-              └── Recent feedback
+              └── Available tables
               │
-     ┌────────┼──────────────────────────────────┐
-     │        │        │         │       │        │
-     ▼        ▼        ▼         ▼       ▼        ▼
-  Orders  Reservations Tables   Menu  Feedback  Reports
-     │        │        │         │       │        │
-     ▼        ▼        ▼         ▼       ▼        ▼
-View      View     View      Add       View    Weekly PDF
-Orders  Reservations Tables  Item    Feedback  Monthly PDF
+     ┌────────┼────────────────────────────┐
+     │        │        │         │          │
+     ▼        ▼        ▼         ▼          ▼
+  Orders  Reservations Tables   Menu      Reports
+     │        │        │         │          │
+     ▼        ▼        ▼         ▼          ▼
+View      View     View      Add       Weekly / Monthly PDF
+Orders  Reservations Tables  Item
      │        │        │         │
      ▼        ▼        ▼         ▼
 View     Confirm/  Set       Edit
@@ -504,7 +463,7 @@ AI returns no matching items
 Try adjusting your selections or browse the full menu."
      │
      ▼
-Menu remains fully accessible — Rasa AI widget does not block ordering
+Menu remains fully accessible — the dedicated Rasa AI page does not block ordering
 ```
 
 **No tables available:**
@@ -521,7 +480,7 @@ Customer returned to date/time selection
 
 **Admin — empty data table:**
 ```text
-No orders / reservations / feedback records exist
+No orders or reservations exist
      │
      ▼
 "No records found." (or contextually appropriate message)
@@ -550,7 +509,7 @@ Ordering continues without Rasa AI — Rasa AI is never a blocking dependency
 
 **Payment failure (order or reservation):**
 ```text
-FIUU payment fails or is declined
+FIUU payment fails or is declined (or the demo test control returns a verified mock failure)
      │
      ▼
 "Payment could not be processed.
@@ -588,7 +547,7 @@ Customer corrects and resubmits
 
 ### 8d. Permission and Access States
 
-**Signed URL expired or invalid (receipt / cancellation / feedback):**
+**Signed URL expired or invalid (receipt / cancellation):**
 ```text
 Customer opens signed link (from email)
      │
@@ -632,3 +591,21 @@ EnsureAdminRole middleware fires
      ▼
 403 Forbidden
 ```
+
+---
+
+## REC-02B — Assessment maintenance flow
+
+Admin authenticates → menu item edit → allergen assessments → select allergen → consult documented restaurant information → select independent recipe and cross-contact statuses → provide evidence and attestation → validate → lock menu item and reject stale context → transactionally save server-owned reviewer/time → display recorded statuses and provenance.
+
+Missing or invalidated assessments → Unknown. Relevant admin menu metadata edit → transactional invalidation. Ingredient/supplier/preparation changes outside stored metadata → administrator records the change and invalidates existing assessments → new documented review required. There is no automatic expiry.
+
+Under REC-02C, available items in active categories are evaluated per excluded code. A current, fully documented assessment governs when a row exists; stale, invalidated, incomplete, unknown, or risky rows exclude that item. Only items with no row use deterministic English/Malay matching against dish name and description, with explicit negations ignored. Unsupported allergy/intolerance requests and zero-eligible-item results show a staff-confirmation caution and make no provider call. Candidates are filtered before provider selection and returned IDs are checked again. Results show the shared-kitchen caution and either reviewed provenance or a menu-check badge; no result is described as allergy-safe.
+
+## REC-02C — Customer allergen-exclusion flow
+
+On `/ai/recommendations`, customer supplies `preferences_text` (0–300 characters) and/or selects one or more `excluded_allergens[]` from the ten canonical allergen codes. Require at least one non-blank text preference or valid selected code. Do not restore legacy structured preference selectors. Map explicit supported English/Malay allergen terms from text to canonical codes, then merge and deduplicate with selected codes. A generic/unspecified allergy or intolerance, or a term outside the controlled vocabulary, immediately branches to the staff-confirmation notice with zero provider calls.
+
+For every selected or recognized code, start with available items in active categories. If a row exists, keep the item only when the assessment is current, has recipe status `reviewed_absent`, cross-contact status `reviewed_no_known_risk`, and complete reviewer/time/evidence provenance. Any stale, invalidated, incomplete, unknown, contains, or possible row excludes it. If no row exists, match canonical English/Malay ingredient terms against name and description; ignore explicit negative menu phrases, exclude positive matches, and allow non-matches with a menu-check badge. If no items remain, show an empty result with a staff-confirmation caution and make no provider call. Recheck every provider-returned ID with the identical rule.
+
+When results are shown, display the shared-kitchen caution and instruct customers to inform staff before ordering. For each excluded code, show the `Reviewed:` badge only for a qualifying current assessment; show `Menu check: [allergen] not listed in dish name or description · Confirm with staff` when no assessment row exists. Menu matching does not verify ingredients or cross-contact. Relevant menu edits or explicit invalidation make an existing assessment ineligible until re-review. Never imply allergy safety.

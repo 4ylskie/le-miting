@@ -3,43 +3,37 @@
 @section('title', 'Reservation Cancelled — Le Miting')
 
 @section('content')
-    <section class="py-12" aria-label="Reservation cancelled">
-        <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
-            <div class="rounded-2xl border border-brand-100 bg-white p-6 text-center shadow-sm md:p-8">
-                <span class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-3xl" aria-hidden="true">✕</span>
-                <h1 class="mt-4 text-2xl font-bold text-brand-800">Reservation Cancelled</h1>
-
-                <dl class="mx-auto mt-6 max-w-sm space-y-3 text-left text-sm">
-                    <div class="flex justify-between">
-                        <dt class="text-text-muted">Reservation number</dt>
-                        <dd class="font-semibold text-text">{{ $reservation->reservation_number }}</dd>
+    <section class="lm-section lm-section--compact" aria-labelledby="cancelled-heading">
+        <div class="lm-container">
+            <div class="lm-stack mx-auto max-w-2xl">
+                <p class="lm-status self-start" data-state="info" role="status">Cancelled</p>
+                <h1 id="cancelled-heading" class="lm-h1">Reservation Cancelled</h1>
+                <dl class="lm-divider grid gap-(--lm-space-lg) pt-(--lm-space-lg) sm:grid-cols-2">
+                    <div class="min-w-0 sm:col-span-2">
+                        <dt class="lm-label">Reservation number</dt>
+                        <dd class="lm-h2 mt-(--lm-space-xs) wrap-anywhere">{{ $reservation->reservation_number }}</dd>
                     </div>
-                    <div class="flex justify-between">
-                        <dt class="text-text-muted">Status</dt>
-                        <dd class="font-semibold text-red-600">Cancelled</dd>
+                    <div>
+                        <dt class="lm-label">Date</dt>
+                        <dd class="lm-body mt-(--lm-space-xs)">{{ $reservation->reservation_date->format('l, d F Y') }}</dd>
                     </div>
-                    <div class="flex justify-between">
-                        <dt class="text-text-muted">Date</dt>
-                        <dd class="text-text">{{ $reservation->reservation_date->format('l, d F Y') }}</dd>
-                    </div>
-                    <div class="flex justify-between">
-                        <dt class="text-text-muted">Time</dt>
-                        <dd class="text-text">{{ \Carbon\Carbon::parse($reservation->reservation_time)->format('g:i A') }}</dd>
+                    <div>
+                        <dt class="lm-label">Time</dt>
+                        <dd class="lm-body mt-(--lm-space-xs)">{{ \Carbon\Carbon::parse($reservation->reservation_time)->format('g:i A') }}</dd>
                     </div>
                 </dl>
-
                 @if ($reservation->reservation_type === 'table_and_food')
-                    <p class="mt-6 rounded-md bg-brand-50 px-4 py-3 text-sm text-brand-800">
-                        Your table slot has been released. If you paid for a food pre-order, the restaurant will handle any applicable refund.
+                    <p class="lm-alert lm-meta" data-state="info">
+                        @if ($reservation->payment?->status === 'paid')
+                            Payment remains recorded as paid. Any refund is handled manually by the restaurant; this cancellation does not issue a refund.
+                        @else
+                            No verified food pre-order payment is recorded. Your table slot has been released.
+                        @endif
                     </p>
                 @endif
-
-                <a
-                    href="{{ route('home') }}"
-                    class="mt-8 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                >
-                    Back to Home
-                </a>
+                <div class="lm-actions">
+                    <a href="{{ route('home') }}" class="lm-button">Back to Home</a>
+                </div>
             </div>
         </div>
     </section>

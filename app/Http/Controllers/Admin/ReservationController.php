@@ -4,15 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AssignReservationTableRequest;
+use App\Http\Requests\Admin\CheckInReservationRequest;
 use App\Http\Requests\Admin\UpdateReservationStatusRequest;
-use App\Mail\FeedbackInvitationMail;
 use App\Models\Reservation;
 use App\Models\Table;
 use App\Services\ReservationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Validation\ValidationException;
 
 class ReservationController extends Controller
 {
@@ -25,12 +22,7 @@ class ReservationController extends Controller
      */
     private function transitions(): array
     {
-        return [
-            'pending' => ['confirmed', 'cancelled'],
-            'confirmed' => ['completed', 'cancelled'],
-            'completed' => [],
-            'cancelled' => [],
-        ];
+        return $this->reservations->transitions();
     }
 
     public function index(Request $request)
@@ -55,19 +47,21 @@ class ReservationController extends Controller
 
     public function show(Reservation $reservation)
     {
-        $reservation->load('table', 'reservationFoods.menuItem', 'payment', 'feedback');
+        $reservation->load('table', 'reservationFoods.menuItem', 'payment');
 
-        $availableTables = Table::where('status', 'available')
+        $candidates = Table::where('status', 'available')
             ->where('id', '!=', $reservation->table_id)
             ->where('capacity', '>=', $reservation->guest_count)
-            ->withCount(['reservations as active_count' => fn ($query) => $query->whereIn('status', ['pending', 'confirmed'])])
             ->get()
-            ->filter(fn (Table $table) => $this->reservations->isTableAvailable($table, $reservation->reservation_date_time))
-            ->values();
+            ->filter(fn (Table $table) => $this->reservations->isTableSuitable($table, $reservation->guest_count));
+        $availableTables = $this->reservations->availableTablesForInterval($candidates, $reservation->reservation_date_time, $reservation->id);
 
         return view('admin.reservations.show', [
             'reservation' => $reservation,
-            'nextStatuses' => $this->transitions()[$reservation->status],
+            'nextStatuses' => array_values(array_diff(
+                $this->transitions()[$reservation->status],
+                [$reservation->checked_in_at === null ? 'completed' : 'cancelled'],
+            )),
             'availableTables' => $availableTables,
         ]);
     }
@@ -75,73 +69,33 @@ class ReservationController extends Controller
     public function updateStatus(UpdateReservationStatusRequest $request, Reservation $reservation)
     {
         $target = $request->validated('status');
-        $allowed = $this->transitions()[$reservation->status];
-
-        if (! in_array($target, $allowed, true)) {
-            return back()->with('error', sprintf(
-                'Cannot move a reservation from %s to %s.',
-                $reservation->status,
-                $target,
-            ));
-        }
-
-        $reservation->update(['status' => $target]);
-
-        if ($target === 'completed') {
-            $this->sendFeedbackInvitation($reservation);
+        $error = $this->reservations->transition($reservation->id, $target, $request->validated('expected_status'));
+        if ($error !== null) {
+            return back()->with('error', $error);
         }
 
         return back()->with('status', 'Reservation '.$reservation->reservation_number.' marked as '.$target.'.');
     }
 
-    private function sendFeedbackInvitation(Reservation $reservation): void
+    public function checkIn(CheckInReservationRequest $request)
     {
-        $feedbackUrl = URL::temporarySignedRoute(
-            'feedback.create',
-            now()->addHours(24),
-            ['token' => 'reservation-'.$reservation->id],
-        );
+        $reservation = $this->reservations->checkIn($request->validated('reservation_number'));
 
-        try {
-            Mail::to($reservation->customer_email)
-                ->send(new FeedbackInvitationMail($reservation->customer_name, 'reservation '.$reservation->reservation_number, $feedbackUrl));
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        return redirect()
+            ->route('admin.reservations.show', $reservation)
+            ->with('status', 'Reservation '.$reservation->reservation_number.' checked in. The reservation remains confirmed.');
     }
 
     public function updateTable(AssignReservationTableRequest $request, Reservation $reservation)
     {
-        if (! in_array($reservation->status, ['pending', 'confirmed'], true)) {
-            return back()->with('error', 'Only active reservations can be reassigned to another table.');
+        $error = $this->reservations->reassign(
+            $reservation->id, (int) $request->validated('table_id'),
+            (int) $request->validated('expected_table_id'), $request->validated('expected_status'),
+        );
+        if ($error !== null) {
+            return back()->with('error', $error);
         }
 
-        $table = Table::findOrFail($request->validated('table_id'));
-
-        if ($table->status !== 'available') {
-            throw ValidationException::withMessages([
-                'table_id' => 'That table is not available. Choose an available table.',
-            ]);
-        }
-
-        if ($table->capacity < $reservation->guest_count) {
-            throw ValidationException::withMessages([
-                'table_id' => 'That table only seats '.$table->capacity.' guests. Choose a table that can seat '.$reservation->guest_count.'.',
-            ]);
-        }
-
-        if ($reservation->table_id === $table->id) {
-            return back()->with('status', 'The reservation is already assigned to Table '.$table->table_number.'.');
-        }
-
-        if (! $this->reservations->isTableAvailable($table, $reservation->reservation_date_time)) {
-            throw ValidationException::withMessages([
-                'table_id' => 'That table is already reserved for this time. Choose another table.',
-            ]);
-        }
-
-        $reservation->update(['table_id' => $table->id]);
-
-        return back()->with('status', 'Reservation '.$reservation->reservation_number.' reassigned to Table '.$table->table_number.'.');
+        return back()->with('status', 'Table assignment saved for reservation '.$reservation->reservation_number.'.');
     }
 }

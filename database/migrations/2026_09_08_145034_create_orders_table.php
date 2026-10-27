@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('customer_name');
             $table->string('customer_email');
             $table->string('customer_phone');
-            $table->string('order_type')->default('dine_in');
+            $table->string('order_type')->default('dine-in');
             $table->string('status')->default('pending');
             $table->decimal('total', 10, 2);
             $table->text('notes')->nullable();

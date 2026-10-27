@@ -3,9 +3,9 @@
 use App\Models\Reservation;
 use App\Models\Table;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\NonTransactionalDatabase;
 
-uses(RefreshDatabase::class);
+uses(NonTransactionalDatabase::class);
 
 test('an administrator can create a table', function () {
     $admin = User::factory()->create(['role' => 'admin']);
@@ -43,6 +43,8 @@ test('an administrator can update a table', function () {
     $this->actingAs($admin)
         ->patch(route('admin.tables.update', $table), [
             'table_number' => 'A2',
+            'expected_capacity' => $table->capacity,
+            'expected_status' => $table->status,
             'capacity' => 4,
             'status' => 'available',
         ])
@@ -64,6 +66,8 @@ test('a table with an upcoming confirmed reservation cannot go into maintenance'
     $this->actingAs($admin)
         ->patch(route('admin.tables.update', $table), [
             'table_number' => 'A3',
+            'expected_capacity' => $table->capacity,
+            'expected_status' => $table->status,
             'capacity' => $table->capacity,
             'status' => 'maintenance',
         ])
@@ -79,6 +83,8 @@ test('a table with no upcoming reservations can go into maintenance', function (
     $this->actingAs($admin)
         ->patch(route('admin.tables.update', $table), [
             'table_number' => 'A4',
+            'expected_capacity' => $table->capacity,
+            'expected_status' => $table->status,
             'capacity' => $table->capacity,
             'status' => 'maintenance',
         ])

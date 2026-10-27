@@ -6,48 +6,47 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'Le Miting — Malaysian Restaurant')</title>
-    <meta name="description" content="@yield('meta_description', 'Le Miting — Order authentic Malaysian dishes, reserve a table, and pre-order food online.')">
+    <meta name="description" content="@yield('meta_description', 'Le Miting — Browse the menu, order food, or reserve a table online.')">
 
+    @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-surface font-sans text-text antialiased min-h-screen flex flex-col">
+<body class="lm-site lm-customer lm-culinary-shader-theme antialiased min-h-screen flex flex-col">
+    <div class="lm-shader-grain" aria-hidden="true"></div>
+
+    <a href="#main-content" class="lm-button sr-only focus:not-sr-only focus:fixed focus:left-(--lm-gutter) focus:top-4 focus:z-50">
+        Skip to content
+    </a>
+
     <x-customer-nav />
 
-    <main class="flex-1">
+    <main id="main-content" tabindex="-1" class="min-w-0 flex-1 scroll-mt-24">
         @yield('content')
     </main>
 
-    <footer class="bg-brand-950 text-brand-100">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-            <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
-                <div>
-                    <h3 class="text-lg font-semibold text-white">Le Miting</h3>
-                    <p class="mt-3 text-sm text-brand-200">
-                        Authentic Malaysian cuisine served with kampung heart. Order, reserve, and enjoy.
-                    </p>
-                </div>
-                <div>
-                    <h4 class="text-sm font-semibold uppercase tracking-wider text-brand-200">Contact</h4>
-                    <ul class="mt-3 space-y-2 text-sm">
-                        <li>No. 12, Jalan Melaka Raya<br>75000 Melaka, Malaysia</li>
-                        <li>+60 6-123 4567</li>
-                        <li><a href="mailto:hello@lemiting.my" class="hover:text-white">hello@lemiting.my</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-sm font-semibold uppercase tracking-wider text-brand-200">Opening Hours</h4>
-                    <ul class="mt-3 space-y-1 text-sm">
-                        <li>Mon – Fri: 11:00 AM – 10:00 PM</li>
-                        <li>Sat – Sun: 10:00 AM – 11:00 PM</li>
-                    </ul>
-                </div>
+    <footer class="lm-divider bg-bone text-espresso">
+        <div class="lm-container lm-section--compact">
+            <div class="flex flex-col gap-(--lm-space-lg) md:flex-row md:items-start md:justify-between">
+                <a href="{{ route('home') }}" class="inline-flex min-h-(--lm-touch) items-center self-start">
+                    <x-brand-logo size="sm" variant="footer" />
+                </a>
+                <nav class="lm-meta flex flex-col gap-(--lm-space-xs) sm:flex-row sm:flex-wrap sm:gap-x-(--lm-space-lg)" aria-label="Policies">
+                    @foreach ([
+                        'policies.terms' => 'Terms & Conditions',
+                        'policies.privacy' => 'Privacy Policy',
+                        'policies.cancellation' => 'Cancellation & Refund Policy',
+                    ] as $routeName => $label)
+                        <a href="{{ route($routeName) }}" class="inline-flex min-h-(--lm-touch) min-w-(--lm-touch) items-center underline-offset-8 hover:underline">
+                            {{ $label }}
+                        </a>
+                    @endforeach
+                </nav>
             </div>
-            <div class="mt-8 border-t border-brand-800 pt-6 text-center text-xs text-brand-300">
-                &copy; {{ date('Y') }} Le Miting. All rights reserved.
-            </div>
+            <p class="lm-meta lm-muted mt-(--lm-space-lg)">&copy; {{ now()->year }} Le Miting. Third-party content belongs to its respective owners.</p>
         </div>
     </footer>
 
     @stack('scripts')
+    <script src="{{ asset('js/customer-interactions.js') }}" defer></script>
 </body>
 </html>

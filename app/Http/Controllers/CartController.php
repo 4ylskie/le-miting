@@ -2,91 +2,73 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddCartItemRequest;
+use App\Http\Requests\UpdateCartItemRequest;
 use App\Models\MenuItem;
+use App\Services\CartService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class CartController extends Controller
 {
-    public function index()
+    public function __construct(private CartService $carts) {}
+
+    public function index(): View
     {
-        $cart = session()->get('cart', ['items' => []]);
-
-        $items = collect($cart['items'] ?? [])->values();
-
-        $total = $items->reduce(function ($carry, $item) {
-            return $carry + ($item['unit_price'] * $item['quantity']);
-        }, 0.0);
+        $summary = $this->carts->orderSummary();
 
         return view('customer.cart.index', [
-            'items' => $items,
-            'total' => $total,
+            'items' => $summary['items'],
+            'total' => $summary['total'],
+            'hasUnavailableItems' => $summary['has_unavailable_items'],
         ]);
     }
 
-    public function add(Request $request)
+    public function add(AddCartItemRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'menu_item_id' => ['required', 'exists:menu_items,id'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:10'],
-        ]);
+        $validated = $request->validated();
 
-        $item = MenuItem::where('is_available', true)->findOrFail($validated['menu_item_id']);
+        $item = MenuItem::query()
+            ->where('is_available', true)
+            ->whereHas('category', fn ($query) => $query->where('is_active', true))
+            ->find($validated['menu_item_id']);
 
-        $cart = session()->get('cart', ['items' => []]);
-
-        if (isset($cart['items'][$item->id])) {
-            $cart['items'][$item->id]['quantity'] += $validated['quantity'];
-        } else {
-            $cart['items'][$item->id] = [
-                'menu_item_id' => $item->id,
-                'name' => $item->name,
-                'unit_price' => (float) $item->price,
-                'quantity' => $validated['quantity'],
-            ];
+        if (! $item) {
+            throw ValidationException::withMessages([
+                'menu_item_id' => 'This menu item is no longer available.',
+            ]);
         }
 
-        session()->put('cart', $cart);
+        $this->carts->addOrderItem($item, $validated['quantity']);
 
         return back()->with('success', $item->name.' added to cart.');
     }
 
-    public function update(Request $request, int $id)
+    public function update(UpdateCartItemRequest $request, int $id): RedirectResponse
     {
-        $validated = $request->validate([
-            'quantity' => ['required', 'integer', 'min:1', 'max:10'],
-        ]);
-
-        $cart = session()->get('cart', ['items' => []]);
-
-        if (isset($cart['items'][$id])) {
-            $cart['items'][$id]['quantity'] = $validated['quantity'];
-            session()->put('cart', $cart);
-        }
+        $this->carts->updateOrderItem($id, $request->validated('quantity'));
 
         return back();
     }
 
-    public function remove(Request $request, int $id)
+    public function remove(Request $request, int $id): RedirectResponse
     {
-        $cart = session()->get('cart', ['items' => []]);
-
-        unset($cart['items'][$id]);
-        session()->put('cart', $cart);
+        $this->carts->removeOrderItem($id);
 
         return back();
     }
 
-    public function clear()
+    public function clear(): RedirectResponse
     {
-        session()->forget('cart');
+        $this->carts->clearOrder();
 
         return redirect()->route('cart.index');
     }
 
     public static function count(): int
     {
-        $cart = session()->get('cart', ['items' => []]);
-
-        return collect($cart['items'] ?? [])->sum('quantity');
+        return collect(session()->get('cart.order.items', session()->get('cart.items', [])))->sum('quantity');
     }
 }

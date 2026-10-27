@@ -21,7 +21,6 @@
             'links' => [
                 ['name' => 'admin.menu.items.index', 'label' => 'Menu Items'],
                 ['name' => 'admin.menu.categories.index', 'label' => 'Categories'],
-                ['name' => 'admin.feedback.index', 'label' => 'Feedback'],
             ],
         ],
         [
@@ -44,29 +43,35 @@
 
     <title>{{ $title }} — Le Miting Admin</title>
 
+    @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-surface font-sans text-text antialiased min-h-screen">
-    <div class="flex min-h-screen">
-        <aside class="fixed inset-y-0 left-0 z-40 w-72 -translate-x-full border-r border-brand-100 bg-brand-950 text-brand-100 transition-transform lg:translate-x-0 lg:translate-y-0" id="admin-sidebar" aria-label="Admin navigation">
-            <div class="flex h-16 items-center justify-between px-5">
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                    <span class="text-xl" aria-hidden="true">🍜</span>
-                    <span class="text-lg font-bold text-white">Le Miting</span>
-                    <span class="rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">Admin</span>
+<body class="lm-site lm-admin min-h-screen antialiased" data-admin-shell>
+    <div class="lm-shader-grain" aria-hidden="true"></div>
+    <a href="#admin-main" class="lm-button sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50">Skip to content</a>
+    <div class="min-h-screen">
+        <aside class="bg-espresso text-ivory lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64 lg:overflow-y-auto" id="admin-sidebar" aria-label="Administration sidebar">
+          <div id="admin-navigation" class="flex min-h-full flex-col px-5 py-6 [&_:focus-visible]:outline-ivory">
+            <div class="flex items-start justify-between gap-3 border-b border-ivory/20 pb-6">
+                <a href="{{ route('admin.dashboard') }}" class="flex min-h-11 flex-col gap-2">
+                    <x-brand-logo size="md" variant="admin" />
+                    <span class="text-xs tracking-widest uppercase text-ivory/70">Administration</span>
                 </a>
+                <button type="button" data-admin-close hidden class="min-h-11 px-2 text-sm underline underline-offset-4">Close</button>
             </div>
 
-            <nav class="mt-2 px-3 pb-6">
+            <nav class="flex-1 pb-6" aria-label="Admin navigation">
                 @foreach ($sections as $section)
-                    <p class="mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-brand-300">{{ $section['label'] }}</p>
+                    <p class="mt-6 px-3 text-xs uppercase tracking-widest text-ivory/60">{{ $section['label'] }}</p>
                     <ul class="mt-2 space-y-1">
                         @foreach ($section['links'] as $link)
-                            @php $isActive = $current === $link['name']; @endphp
+                            @php
+                                $isActive = $current === $link['name'] || (str_ends_with($link['name'], '.index') && str_starts_with($current, substr($link['name'], 0, -5)));
+                            @endphp
                             <li>
                                 <a
                                     href="{{ route($link['name']) }}"
-                                    class="block rounded-md px-3 py-2 text-sm font-medium {{ $isActive ? 'bg-brand-800 text-white' : 'text-brand-200 hover:bg-brand-900 hover:text-white' }}"
+                                    class="flex min-h-11 items-center border-l-2 px-3 py-2 text-sm {{ $isActive ? 'border-ivory bg-ivory/10 text-ivory' : 'border-transparent text-ivory/80 hover:bg-ivory/10 hover:text-ivory' }}"
                                     @if ($isActive) aria-current="page" @endif
                                 >
                                     {{ $link['label'] }}
@@ -76,41 +81,39 @@
                     </ul>
                 @endforeach
             </nav>
+            <form method="POST" action="{{ route('admin.logout') }}" class="border-t border-ivory/20 pt-4">
+                @csrf
+                <button type="submit" class="min-h-11 w-full px-3 text-left text-sm underline-offset-4 hover:underline">Log out</button>
+            </form>
+          </div>
         </aside>
+        <dialog id="admin-navigation-dialog" aria-label="Administration navigation" class="fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-72 max-w-[calc(100%-3rem)] overflow-y-auto border-0 bg-espresso p-0 text-ivory backdrop:bg-espresso/50"></dialog>
 
-        <div class="flex flex-1 flex-col lg:pl-72">
-            <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-brand-100 bg-surface/95 px-4 backdrop-blur sm:px-6">
+        <div class="min-w-0 lg:pl-64">
+            <header class="flex min-h-24 flex-wrap items-center justify-between gap-4 border-b border-line bg-ivory px-5 py-5 sm:px-8">
+              <div class="flex min-w-0 items-center gap-4">
                 <button
                     type="button"
-                    class="inline-flex items-center justify-center rounded-md p-2 text-text-muted hover:bg-brand-50 lg:hidden"
-                    aria-label="Open navigation menu"
-                    onclick="document.getElementById('admin-sidebar').classList.remove('-translate-x-full')"
+                    hidden
+                    data-admin-open
+                    class="min-h-11 border border-line px-3 text-sm lg:hidden"
+                    aria-label="Open administration navigation"
+                    aria-controls="admin-navigation-dialog"
+                    aria-expanded="false"
+                    aria-haspopup="dialog"
                 >
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+                    Menu
                 </button>
-
-                <h1 class="text-base font-semibold text-brand-800 sm:text-lg">{{ $title }}</h1>
-
-                <div class="flex items-center gap-3">
-                    <span class="hidden text-sm text-text-muted sm:inline">
-                        {{ auth()->user()->name }}
-                    </span>
-                    <form method="POST" action="{{ route('admin.logout') }}" class="inline">
-                        @csrf
-                        <button
-                            type="submit"
-                            class="inline-flex items-center rounded-md border border-brand-200 bg-white px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
-                        >
-                            Log out
-                        </button>
-                    </form>
-                </div>
+                <h1 class="min-w-0 font-display text-3xl wrap-anywhere sm:text-4xl">{{ $title }}</h1>
+              </div>
+              <div class="flex min-w-0 flex-wrap items-center gap-4">
+                @yield('header-actions')
+                <span class="text-sm text-mineral wrap-anywhere">{{ auth()->user()->name }}</span>
+              </div>
             </header>
 
-            <main class="flex-1 px-4 py-8 sm:px-6 lg:px-8">
-                <div>
+            <main id="admin-main" tabindex="-1" class="min-w-0 px-5 py-8 sm:px-8">
+                <div class="mx-auto w-full min-w-0 max-w-7xl">
                     @yield('content')
                 </div>
             </main>

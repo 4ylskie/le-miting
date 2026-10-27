@@ -14,8 +14,8 @@
         <div class="row"><dt>Table</dt><dd>Table {{ $reservation->table->table_number }}</dd></div>
     </dl>
 
-    @if ($reservation->reservationFoods->count() > 0)
-        <p class="muted" style="margin-top:16px;">A refund for your pre-ordered food will be processed by the restaurant.</p>
+    @if ($hasVerifiedPaidPayment)
+        <p class="muted mt-16">This cancellation does not issue a refund. Please contact the restaurant about any refund request; eligibility and processing are handled by the restaurant.</p>
     @endif
 
     <p class="muted">We hope to welcome you to Le Miting another time.</p>

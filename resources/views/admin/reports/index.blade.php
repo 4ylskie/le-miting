@@ -2,8 +2,7 @@
 
 @section('content')
     <div class="mb-6">
-        <h1 class="text-xl font-semibold text-text">Reports</h1>
-        <p class="mt-1 text-sm text-text-muted">Sales, reservation, and feedback reports — weekly and monthly, generated on demand as PDFs.</p>
+        <p class="text-sm text-text-muted">Sales and reservation reports — weekly and monthly, generated on demand as PDFs.</p>
     </div>
 
     @php
@@ -36,20 +35,6 @@
                 'detail' => 'Total reservations, completed and cancelled, guest count, popular reservation times.',
                 'route' => 'admin.reports.reservations-monthly',
             ],
-            [
-                'type' => 'Feedback',
-                'period' => 'Weekly',
-                'window' => 'Last 7 days',
-                'detail' => 'Average food, service, and experience ratings with star distribution.',
-                'route' => 'admin.reports.feedback-weekly',
-            ],
-            [
-                'type' => 'Feedback',
-                'period' => 'Monthly',
-                'window' => 'Last 30 days',
-                'detail' => 'Average food, service, and experience ratings with star distribution.',
-                'route' => 'admin.reports.feedback-monthly',
-            ],
         ];
     @endphp
 
@@ -63,15 +48,18 @@
                 </div>
                 <a
                     href="{{ route($report['route']) }}"
-                    class="mt-6 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    data-report-download
+                    data-report-name="{{ $report['period'] }} {{ $report['type'] }}"
+                    class="lm-admin-target mt-6 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                 >
-                    Download PDF
+                    Download {{ $report['period'] }} {{ $report['type'] }} PDF
                 </a>
             </div>
         @endforeach
     </div>
 
+    <p class="mt-6 text-sm text-text-muted" role="status" aria-live="polite" data-report-download-status hidden></p>
     <p class="mt-6 text-xs text-text-muted">
-        Reports are generated on demand and downloaded as PDFs. If generation fails, an error is shown and nothing is downloaded.
+        Reports are generated on demand. Your browser handles the download; this page cannot confirm completion or detect a failed download.
     </p>
 @endsection

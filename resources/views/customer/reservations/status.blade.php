@@ -3,25 +3,35 @@
 @section('title', 'Reservation Status — Le Miting')
 
 @section('content')
-    <section class="py-12" aria-label="Reservation status">
-        <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
-            <div class="rounded-2xl border border-brand-100 bg-white p-6 text-center shadow-sm md:p-8">
-                <h1 class="text-2xl font-bold text-brand-800">
+    <section class="lm-section lm-section--compact" aria-labelledby="status-heading">
+        <div class="lm-container">
+            <div class="lm-stack mx-auto max-w-2xl">
+                <p class="lm-status self-start" data-state="info" role="status">{{ ucfirst($reservation->status) }}</p>
+                <h1 id="status-heading" class="lm-h1">
                     @if ($reservation->status === 'completed')
                         This reservation has already been completed.
-                    @else
+                    @elseif ($reservation->status === 'cancelled')
                         This reservation has already been cancelled.
+                    @else
+                        This reservation can no longer be cancelled online.
                     @endif
                 </h1>
-                <p class="mt-3 text-sm text-text-muted">
-                    Reservation {{ $reservation->reservation_number }} can no longer be cancelled online.
+                <dl class="lm-divider pt-(--lm-space-lg)">
+                    <dt class="lm-label">Reservation number</dt>
+                    <dd class="lm-h2 mt-(--lm-space-xs) wrap-anywhere">{{ $reservation->reservation_number }}</dd>
+                </dl>
+                <p class="lm-body lm-muted">
+                    @if ($reservation->checked_in_at !== null)
+                        This reservation has been checked in and can no longer be cancelled.
+                    @elseif (in_array($reservation->status, ['pending', 'confirmed'], true))
+                        Its reservation time has already started.
+                    @else
+                        This reservation can no longer be cancelled online.
+                    @endif
                 </p>
-                <a
-                    href="{{ route('home') }}"
-                    class="mt-8 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                >
-                    Back to Home
-                </a>
+                <div class="lm-actions">
+                    <a href="{{ route('home') }}" class="lm-button">Back to Home</a>
+                </div>
             </div>
         </div>
     </section>

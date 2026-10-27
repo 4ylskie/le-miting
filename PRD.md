@@ -13,15 +13,15 @@
 This revision closes gaps identified in review. No previously-defined requirement was removed; the following were added or clarified:
 
 - Reservation hold expiry rule for unpaid Table + Food bookings (§15, BR-04).
-- Guest record access protection — signed links for receipts, cancellation, and feedback (§45).
+- Guest record access protection — signed links for receipts and cancellation (§45).
 - Order type (dine-in / takeaway) added to checkout, confirmation, and admin order view.
-- Admin reservation lookup/validation by reservation number or QR content (§28).
+- Admin reservation lookup/validation by reservation number (§28).
 - Cart session key separation between ordering and reservation pre-order flows (§8, FR-04).
 - Category deletion rule tied to referencing menu items (§31).
 - Table maintenance guard against existing future reservations (§29).
 - Defined metrics for "today's revenue," report periods, and "popular menu items" (§26, §33).
 - Removed "Appetite where applicable" from Rasa AI preferences (§21) — no corresponding menu attribute existed in FR-03, violating this document's own vocabulary-consistency rule.
-- Added minimum field definitions for `orders`, `order_items`, `reservations`, `reservation_foods` (§34), matching the level of detail already given for menus/payments/feedback.
+- Added minimum field definitions for `orders`, `order_items`, `reservations`, and `reservation_foods` (§34).
 
 ---
 
@@ -37,7 +37,7 @@ Web-based Malaysian restaurant ordering and reservation system.
 
 ## 1.3 Project Purpose
 
-Le Miting is a digital restaurant platform that allows customers to browse the restaurant menu, receive Rasa AI food recommendations, place food orders, reserve tables, pre-order food with a reservation, make online payments where applicable, receive digital receipts and confirmations, and provide feedback after dining.
+Le Miting is a digital restaurant platform that allows customers to browse the restaurant menu, receive Rasa AI food recommendations, place food orders, reserve tables, pre-order food with a reservation, make online payments where applicable, and receive digital receipts and confirmations.
 
 The system also provides an administrative area for restaurant staff to manage:
 
@@ -46,7 +46,6 @@ The system also provides an administrative area for restaurant staff to manage:
 - Tables
 - Menu items
 - Categories
-- Feedback
 - Reports
 
 Customers do not need to create an account.
@@ -70,7 +69,7 @@ The system aims to:
 - Provide digital reservation confirmation.
 - Provide digital order records and receipts.
 - Give restaurant staff a central management system.
-- Provide basic sales, reservation, and feedback reporting.
+- Provide basic sales and reservation reporting.
 
 ## 2.2 Academic Objectives
 
@@ -149,7 +148,6 @@ Customers can:
 - Make applicable payments
 - Receive confirmations
 - Cancel eligible reservations
-- Submit feedback after completion
 
 ## 4.2 Admin
 
@@ -165,7 +163,6 @@ Admin users can:
 - Manage tables
 - Manage menus
 - Manage categories
-- View feedback
 - Generate reports
 
 Multi-admin role hierarchies are out of scope.
@@ -193,10 +190,9 @@ Multi-admin role hierarchies are out of scope.
 - Table + food reservation
 - Table availability checking
 - Reservation cancellation
-- Reservation QR code
-- Post-dining feedback
-- Google Review redirect after feedback
-- Contact Us page with Rasa AI recommendation
+- Readable reservation confirmation code
+- Optional external Google Review invitation after completion
+- Contact Us enquiry page; Rasa AI remains on its dedicated page
 
 ### Admin
 
@@ -207,7 +203,6 @@ Multi-admin role hierarchies are out of scope.
 - Table management
 - Menu management
 - Category management
-- Feedback management
 - Weekly PDF reports
 - Monthly PDF reports
 
@@ -317,9 +312,7 @@ PDF Receipt + Email
     ↓
 Dining / Order Completion
     ↓
-Feedback Invitation Email
-    ↓
-Feedback
+Optional Google Review Invitation Email
 ```
 
 ## 7.2 Reservation Flow
@@ -345,7 +338,7 @@ Customer Details
     ↓
 Confirm Reservation
     ↓
-QR Code
+Reservation Number
     ↓
 Reservation Email
     ↓
@@ -353,9 +346,7 @@ Restaurant Visit
     ↓
 Admin Marks Completed
     ↓
-Feedback Invitation Email
-    ↓
-Feedback
+Optional Google Review Invitation Email
 ```
 
 ### Table + Food
@@ -389,7 +380,7 @@ Payment Verification
     ↓
 Reservation Confirmation
     ↓
-QR Code
+Reservation Number
     ↓
 Email
     ↓
@@ -397,9 +388,7 @@ Restaurant Visit
     ↓
 Admin Marks Completed
     ↓
-Feedback Invitation Email
-    ↓
-Feedback
+Optional Google Review Invitation Email
 ```
 
 ---
@@ -436,7 +425,6 @@ Customers shall be able to:
 - View description.
 - View availability.
 - View image.
-- View rating where available.
 
 ---
 
@@ -556,9 +544,7 @@ refunded
 
 FIUU credentials must remain in `.env`.
 
-If real FIUU credentials are unavailable during development, use a clearly labelled sandbox/mock flow.
-
-Mock payment success must never be presented as real payment.
+If real FIUU credentials are unavailable during development, development and demonstration environments use a mock payment gateway that reproduces the application's FIUU-style payment lifecycle without processing real funds. It redirects a pending transaction to a signed demo gateway, offers non-sensitive demo payment methods, verifies a mock-only HMAC callback/result, supports success, failure, abandonment, retry, return handling, and idempotency. The browser return reads the stored payment state and never proves payment by itself. FIUU remains the intended real gateway; the mock does not prove FIUU protocol compatibility.
 
 ---
 
@@ -657,7 +643,7 @@ Contains:
 - Time
 - Guest count
 - Table number if assigned
-- QR code
+- Reservation number
 - Reservation status
 
 ### Cancellation Notification
@@ -668,11 +654,9 @@ Contains:
 - Cancellation status
 - Relevant payment/refund information if applicable
 
-### Feedback Invitation
+### Google Review Invitation
 
-After an order or reservation has been marked `completed`, send a feedback invitation email containing a link to the feedback form.
-
-Feedback invitations must only be sent for completed transactions.
+After an order or reservation first reaches `completed`, the customer may receive an optional email invitation to the configured external Google Review destination. Le Miting does not collect, store, submit, or manage the resulting review.
 
 SMTP credentials must remain in `.env`.
 
@@ -882,13 +866,11 @@ As with the receipt route, the cancellation action must not be reachable from a 
 
 ---
 
-# 20. RESERVATION QR CODE
+# 20. RESERVATION IDENTIFIER
 
 ## FR-16
 
-Generate a QR code after successful reservation.
-
-The QR code must contain only a non-sensitive reservation identifier.
+Generate a unique, readable `reservation_number` after a reservation is created.
 
 Example:
 
@@ -896,28 +878,9 @@ Example:
 RES-2026-00125
 ```
 
-Do not store:
+The reservation number is displayed on the reservation confirmation page, in the reservation confirmation email, and in administrator records. It is used for reservation lookup and check-in validation; it is not a credential for payment, receipt retrieval, or cancellation.
 
-- Customer name
-- Email
-- Phone number
-- Other personal information
-
-inside the QR payload.
-
-The QR code is used for:
-
-- Reservation validation
-- Customer check-in
-- Identifying the reservation for staff
-
-The QR code is NOT used for:
-
-- Payment
-- Feedback
-- Receipt retrieval
-
-At check-in, staff look up the reservation by its identifier (see FR-22 in §28). The lookup must reject reservations that are not currently `confirmed` — a `cancelled` or already-`completed` reservation must not be treated as a valid check-in, even if the QR code itself still scans.
+At check-in, staff look up the reservation by its identifier (see FR-22 in §28). The lookup must reject reservations that are not currently `confirmed`; a `cancelled` or already-`completed` reservation must not be treated as a valid check-in.
 
 ---
 
@@ -927,7 +890,7 @@ At check-in, staff look up the reservation by its identifier (see FR-22 in §28)
 
 Rasa AI is an optional menu recommendation feature.
 
-Customers may select preferences such as:
+Customers may describe preferences in a bounded text field on the dedicated Rasa AI page. For REC-02C, they may also select controlled allergen exclusions; at least one non-blank text preference or one valid allergen exclusion is required. Supported preference wording is interpreted into the same structured menu filters used internally, such as:
 
 - Spice level
 - Protein
@@ -939,7 +902,7 @@ Customers may select preferences such as:
 
 "Beverage preference" maps to the existing `menu_categories` filter (e.g. Drinks), not to a menu attribute field — it doesn't need a new column, unlike spice/protein/dietary/flavor which map directly to FR-03's attribute fields.
 
-Preferences are stored in the session only, the same as the cart — never persisted to the database, consistent with the no-login design.
+The text request is stored in the session only, the same as the cart — never persisted to the database, consistent with the no-login design. The customer form does not expose legacy preference selectors (`category`, `spice_level`, `protein`, `dietary`, or `flavor`); the controlled allergen-exclusion checkboxes specified in REC-02C are the only structured customer inputs. Unrecognized or conflicting preferences must not produce unsupported recommendations. A stated budget is a maximum price per dish. REC-02C defines the limited, fail-closed allergen-exclusion behavior; it does not make an allergy-safety claim.
 
 The same menu vocabulary should be used for:
 
@@ -983,9 +946,7 @@ The Contact Us page shall:
   - Email (required)
   - Message (required)
 
-- Display the Rasa AI recommendation widget.
-
-The Rasa AI widget on this page behaves identically to FR-17 — same preference inputs, same recommendation logic, same failure handling (§22). It is a second surface for the same feature, not a separate AI integration.
+Rasa AI is provided only on its dedicated page. Contact Us does not embed a recommendation form.
 
 The contact form is a one-way enquiry form. It does not generate an order, reservation, or any database record. Submitted messages are sent to the restaurant by email (Laravel Mail). No reply system is in scope.
 
@@ -1006,54 +967,13 @@ Ordering must continue functioning without AI.
 
 ---
 
-# 23. FEEDBACK
+# 23. EXTERNAL GOOGLE REVIEW INVITATION
 
-## FR-18 Feedback Requirements
+## FR-18
 
-Customers may provide:
+When an order or reservation first reaches `completed`, Le Miting may send an optional `GoogleReviewInvitationMail` with a configured external Google Review URL.
 
-```text
-Food Rating: 1–5
-Service Rating: 1–5
-Experience Rating: 1–5
-Comment
-```
-
-Feedback must be linked to a specific completed:
-
-- Order
-or
-- Reservation
-
-Do not allow unlimited anonymous feedback unrelated to a completed transaction.
-
----
-
-# 24. FEEDBACK TIMING
-
-Feedback is available only after dining / completion.
-
-The expected flow is:
-
-```text
-Order / Reservation
-        ↓
-Completed
-        ↓
-Feedback Invitation Email
-        ↓
-Feedback Form
-        ↓
-Feedback Saved
-        ↓
-Thank-you page with optional Google Review link
-```
-
-The reservation QR code is not used as a feedback mechanism.
-
-After feedback is saved, the customer is shown a thank-you page that includes a direct link to Le Miting's Google review page. Clicking the link opens Google in a new tab. The system does not use the Google Places API and does not create, post, or verify reviews. The link is static — it does not carry feedback data to Google.
-
-The feedback invitation email link is the only intended entry point to the feedback form for a given transaction — it must be a signed link bound to that specific order or reservation, not a plain form that accepts any order/reservation number typed in (see §45).
+The customer may choose to review the restaurant on Google. Google owns and stores any submitted review. Le Miting does not collect customer feedback internally, create a feedback form or database entity, submit reviews automatically, copy review content, provide review administration, or call Google Maps or Places APIs. The external URL must not expose internal order or reservation identifiers.
 
 ---
 
@@ -1091,7 +1011,6 @@ Include:
 - Pending orders
 - Pending reservations
 - Available tables
-- Recent feedback
 
 "Today's revenue" is the sum of all `payments` with status `paid` and a payment timestamp within today, regardless of whether the payment is linked to an order or to a reservation's food pre-order — both are real revenue and should be counted together.
 
@@ -1145,7 +1064,7 @@ These must remain separate.
 Admin may:
 
 - View reservations
-- Look up a reservation by reservation number or scanned/typed QR content, for check-in
+- Look up a reservation by reservation number for check-in
 - Confirm reservations (manual/edge-case use — see BR-04 for the normal auto-confirm path)
 - Cancel reservations
 - Mark reservations completed
@@ -1154,7 +1073,7 @@ Admin may:
 - Adjust table assignment
 - View pre-ordered food
 
-The lookup above is a plain text-input search — it does not require a dedicated camera-scanning library; a phone camera app or any generic QR reader can decode the code into text, which staff paste or type into the search field.
+The lookup above is a plain text-input search by reservation number; it does not require a camera-scanning library.
 
 Reservation status:
 
@@ -1220,33 +1139,10 @@ Admin may:
 
 - Add category
 - Edit category
-- Remove a category only if it has no menu items assigned to it
+- Remove a category only if no menu item references it, including soft-deleted items
 - View menu items under a category
 
-If a category still has menu items, deletion is blocked. The admin must reassign or deactivate those items first — the same deactivate-over-delete pattern used for menu items (§30), applied one level up.
-
----
-
-# 32. ADMIN FEEDBACK MANAGEMENT
-
-## FR-26
-
-Admin may:
-
-- View feedback
-- View food ratings
-- View service ratings
-- View experience ratings
-- View comments
-- View linked order/reservation
-- View average ratings
-- Filter feedback
-
-Do not create social-media features such as:
-
-- Likes
-- Replies
-- Public discussions
+If any menu item references a category, deletion is blocked, including when the item is deactivated or soft-deleted. Deactivation alone does not clear the restriction; the category can be deleted only after no menu items reference it.
 
 ---
 
@@ -1298,26 +1194,6 @@ Includes:
 - Guest count
 - Popular reservation times
 
-### Weekly Feedback Report
-
-Includes:
-
-- Average food rating
-- Average service rating
-- Average experience rating
-- Review count
-- Rating distribution
-
-### Monthly Feedback Report
-
-Includes:
-
-- Average food rating
-- Average service rating
-- Average experience rating
-- Review count
-- Rating distribution
-
 Use Laravel DomPDF.
 
 Reports should be generated from current transaction data.
@@ -1344,7 +1220,6 @@ order_items
 reservations
 reservation_foods
 payments
-feedback
 ```
 
 The `users` table holds **admin accounts only** — no customer accounts exist, because customers do not log in.
@@ -1353,7 +1228,7 @@ No `reports` table is required because reports are generated on demand.
 
 ## Minimum Order & Reservation Fields (added)
 
-These were referenced throughout the document but not previously enumerated at the field level, unlike menus/payments/feedback below.
+These were referenced throughout the document but not previously enumerated at the field level, unlike menus and payments below.
 
 ```text
 orders
@@ -1394,7 +1269,7 @@ time
 guest_count
 status              (pending / confirmed / completed / cancelled)
 special_request
-reservation_number   (e.g. RES-2026-00125 — the QR payload)
+reservation_number   (e.g. RES-2026-00125 — the readable reservation identifier)
 created_at
 updated_at
 
@@ -1461,33 +1336,6 @@ For reservation + food, payment must be associated with the relevant reservation
 
 ---
 
-# 37. MINIMUM FEEDBACK FIELDS
-
-```text
-id
-order_id nullable
-reservation_id nullable
-food_rating
-service_rating
-experience_rating
-comment
-created_at
-updated_at
-```
-
-Validation rule:
-
-Exactly one of:
-
-```text
-order_id
-reservation_id
-```
-
-must reference a completed transaction.
-
----
-
 # 38. CORE RELATIONSHIPS
 
 ```text
@@ -1524,22 +1372,6 @@ Reservation
     0..1 ─── 1
 Payment
 ```
-
-Feedback may reference either:
-
-```text
-Order
-```
-
-or:
-
-```text
-Reservation
-```
-
-but not both at the same time.
-
----
 
 # 39. LARAVEL ARCHITECTURE
 
@@ -1612,11 +1444,15 @@ Create a reusable Blade component when it:
 Examples:
 
 ```text
-button
-food-card
+customer-navigation
+editorial-section-heading
+action-button
+form-field
+menu-media-treatment
+menu-list-row
 status-badge
-table-button
-section-heading
+table-selection-control
+receipt-summary
 ```
 
 Do not create components for trivial single-use wrappers.
@@ -1668,18 +1504,8 @@ Optimize:
 - Database queries
 - Eloquent relationships
 - Admin pagination
-- Hero video
 
-Hero video requirements:
-
-- MP4/H.264
-- Maximum approximately 5MB
-- `preload="metadata"`
-- Muted
-- Loop
-- Plays inline
-
-If the hero video negatively affects performance, use a poster image or fallback instead.
+Customer hero video is out of scope. Customer-facing photography is optional, must be verified and approved, and must use responsive dimensions and performance-conscious loading. Pages must remain deliberate and usable when no photography is available.
 
 Performance must be tested rather than assumed.
 
@@ -1714,15 +1540,14 @@ Use `.env.example`.
 
 ## Guest Record Access Protection
 
-Because there is no customer login, order and reservation identifiers are the only thing standing between a guest and their own record — and reservation numbers in particular are shown in a human-readable, sequential-looking format (`RES-2026-00125`). Without an additional check, anyone who can see or guess one identifier could view another customer's receipt (name, email, phone), cancel their reservation, or submit feedback in their name.
+Because there is no customer login, order and reservation identifiers are the only thing standing between a guest and their own record — and reservation numbers in particular are shown in a human-readable, sequential-looking format (`RES-2026-00125`). Without an additional check, anyone who can see or guess one identifier could view another customer's receipt (name, email, phone) or cancel their reservation.
 
 The following actions must use **Laravel signed URLs** (`URL::temporarySignedRoute`), not the bare identifier alone, as the access control:
 
 - Viewing or downloading a receipt (`/orders/{order}/receipt`)
 - Cancelling a reservation
-- Opening the feedback form for a specific order/reservation
 
-These signed links are what gets emailed to the customer (order confirmation, reservation confirmation, feedback invitation). A signature mismatch or expired link must return a generic "link no longer valid" error — not a hint about which part of the signature failed, and not a fallback that accepts the raw ID.
+These signed links are what gets emailed to the customer in order and reservation confirmations. A signature mismatch or expired link must return a generic "link no longer valid" error — not a hint about which part of the signature failed, and not a fallback that accepts the raw ID.
 
 This does not require an account system — it requires that the emailed link, not the number printed on it, is the actual credential.
 
@@ -1758,8 +1583,7 @@ This does not require an account system — it requires that the emailed link, n
 - FIUU hidden values
 - OpenAI request parameters
 - OpenAI system prompt
-- QR-code payload structure
-- QR verification logic
+- Reservation-number lookup behavior
 
 The purpose is to prevent UI redesign from breaking existing functionality.
 
@@ -1869,7 +1693,6 @@ Validate:
 - Menu item IDs
 - Quantity
 - Reservation availability
-- Feedback ratings
 
 Important values must never rely solely on browser-side validation.
 
@@ -1887,7 +1710,6 @@ Examples:
 - Mark reservations cancelled rather than deleting.
 - Keep completed orders.
 - Keep completed reservations.
-- Keep feedback records.
 - Keep payment history.
 
 ---
@@ -1918,7 +1740,6 @@ Build admin authentication
 Build admin dashboard
 Build admin management
 Build reports
-Build feedback
 Testing and bug fixes
 Final UI refinement
 ```
@@ -1948,7 +1769,7 @@ Test:
 - Landing page
 - Contact Us page
 - Contact form submission
-- Rasa AI on Contact Us
+- Dedicated Rasa AI page
 - Menu
 - Search
 - Filters
@@ -1965,10 +1786,9 @@ Test:
 - Double-booking prevention
 - Reservation cancellation
 - Table + food
-- QR code
-- Feedback
+- Reservation-number confirmation
 - Reservation hold expiry (unpaid Table + Food reservation releases the table after 15 minutes)
-- Receipt/cancellation/feedback links reject a guessed or tampered identifier without a valid signature
+- Receipt/cancellation links reject a guessed or tampered identifier without a valid signature
 
 ## Admin Tests
 
@@ -1982,9 +1802,8 @@ Test:
 - Tables
 - Menu
 - Categories
-- Feedback
 - Reports
-- Reservation lookup/check-in by number or QR content, including rejection of a cancelled/completed reservation
+- Reservation lookup/check-in by number, including rejection of a cancelled/completed reservation
 
 ## Security Tests
 
@@ -1998,8 +1817,8 @@ Test:
 - Invalid reservation times
 - Client price manipulation
 - Payment status manipulation
-- Accessing a receipt, cancellation, or feedback link with a guessed ID and no valid signature
-- Accessing a receipt, cancellation, or feedback link with an expired signature
+- Accessing a receipt or cancellation link with a guessed ID and no valid signature
+- Accessing a receipt or cancellation link with an expired signature
 - Two customers attempting to hold the same table/slot concurrently before payment
 
 ---
@@ -2012,7 +1831,7 @@ The project is complete when:
 
 - Customer can browse the restaurant.
 - Customer can view the Contact Us page with restaurant details and submit an enquiry.
-- Rasa AI recommendation is available on the Contact Us page.
+- Rasa AI recommendation is available on its dedicated page; Contact Us remains a separate enquiry page.
 - Customer can browse and filter menu items.
 - Customer can use Rasa AI.
 - Customer can add items to cart.
@@ -2025,14 +1844,12 @@ The project is complete when:
 - Customer can view correct table availability for the requested date/time.
 - System prevents table double booking.
 - Customer can reserve table + food.
-- Customer can receive QR confirmation.
+- Customer can receive a confirmation containing the readable reservation number.
 - Customer can cancel eligible reservations.
-- Customer can receive post-dining feedback invitation.
-- Customer can submit feedback for completed transactions.
-- After submitting feedback, customer sees a thank-you page with a Google Review link.
+- Customer may receive an optional post-completion Google Review invitation email that opens the configured external destination.
 - Customer's order type (dine-in/takeaway) is captured and shown to staff.
 - An unpaid Table + Food reservation stops blocking its table/slot after the 15-minute hold expires.
-- Receipt, cancellation, and feedback links only work as the signed link that was emailed — not by ID alone.
+- Receipt and cancellation links only work as the signed link that was emailed — not by ID alone.
 
 ### Admin
 
@@ -2043,10 +1860,9 @@ The project is complete when:
 - Admin can manage tables.
 - Admin can manage menus.
 - Admin can manage categories.
-- Admin can view feedback.
 - Admin can generate weekly reports.
 - Admin can generate monthly reports.
-- Admin can look up a reservation by number or QR content and the lookup rejects non-`confirmed` reservations at check-in.
+- Admin can look up a reservation by number and the lookup rejects non-`confirmed` reservations at check-in.
 
 ### Technical
 
@@ -2061,7 +1877,7 @@ The project is complete when:
 - FIUU is safely integrated.
 - PDF generation works.
 - Email works.
-- QR generation works.
+- Reservation-number generation works.
 - Responsive design works.
 - Accessibility requirements are addressed.
 - No hard-coded secrets exist.
@@ -2079,7 +1895,7 @@ The project is complete when:
 | Single admin role | No role hierarchy required |
 | Table turnover | Fixed 2-hour reservation duration |
 | Reservation refund after payment | Manual admin handling |
-| Hero video affects performance | Poster/fallback may be used |
+| Approved photography is unavailable | Typography-led layouts and runtime menu images keep the customer site usable without fabricated assets |
 | Advanced analytics | Out of scope |
 | No customer login means no natural access control on guest records | Signed URLs (§45) act as the credential instead of an account |
 | Unpaid Table + Food reservation could block a table indefinitely | 15-minute hold expiry, enforced via the availability query (BR-04) |
@@ -2136,7 +1952,7 @@ can be finalized without changing the core architecture.
 - Double-booking prevention
 - Table + food
 - Cancellation
-- QR confirmation
+- Reservation-number confirmation
 
 ## Phase 4 — Integrations
 
@@ -2154,7 +1970,6 @@ can be finalized without changing the core architecture.
 - Tables
 - Menu
 - Categories
-- Feedback
 
 ## Phase 6 — Reporting
 
@@ -2188,13 +2003,12 @@ A release candidate is complete when:
 6. Payment is verified server-side.
 7. Receipts are generated.
 8. Emails are sent.
-9. QR reservations work.
-10. Feedback invitation is sent after completion.
-11. Feedback can only be linked to completed transactions.
-12. Receipt, cancellation, and feedback access all require a valid signed link — an identifier alone is not sufficient.
-13. An unpaid Table + Food reservation releases its table/slot after the 15-minute hold window.
-14. Admin can manage all required data, including reservation lookup/check-in by number or QR content.
-15. Reports generate correctly.
+9. Reservation numbers are generated and displayed consistently.
+10. Optional Google Review invitation is sent after the first completed transition and opens only the configured external destination.
+11. Receipt and cancellation access require a valid signed link — an identifier alone is not sufficient.
+12. An unpaid Table + Food reservation releases its table/slot after the 15-minute hold window.
+13. Admin can manage all required data, including reservation lookup/check-in by number.
+14. Four reports generate correctly: weekly/monthly sales and weekly/monthly reservations.
 16. Rasa AI recommendations use only real menu items.
 17. AI failure does not prevent normal ordering.
 18. Sensitive credentials remain protected.
@@ -2253,10 +2067,9 @@ Le Miting is a Laravel-based Malaysian restaurant ordering and reservation syste
 - FIUU payment
 - Digital receipts
 - Email notifications
-- Reservation QR validation
-- Post-dining feedback
-- Google Review redirect after feedback
-- Contact Us with Rasa AI
+- Reservation-number validation
+- Optional external Google Review invitation after completion
+- Dedicated Rasa AI page, separate from Contact Us
 - Restaurant administration
 - Weekly and monthly reporting
 
@@ -2265,3 +2078,23 @@ The core product identity is:
 **Le Miting**
 
 **Rasa Kampung, Cara Moden.**
+
+---
+
+## REC-02B — Admin allergen assessment scope
+
+Authorized administrators may record documented restaurant assessments for the controlled vocabulary: peanut, tree nuts, milk, egg, soy, wheat/gluten, fish, crustacean shellfish, molluscs and sesame. Each menu-item/allergen pair has independent recipe (unknown, contains, reviewed absent) and cross-contact (unknown, possible, reviewed no known risk) statuses. Missing records always mean unknown; no existing menu item receives an inferred assessment.
+
+Each recorded review requires the authenticated reviewer, server-recorded UTC time, evidence/reference and confirmation that documented restaurant information was used. Relevant recipe, ingredient, supplier or preparation changes invalidate assessments. No automatic expiry is defined. Unknown or invalidated information must never appear verified.
+
+REC-02B is data management only and creates no inferred assessment rows. REC-02C uses a current admin assessment when one exists for an item/code; when none exists, the separate deterministic menu-text fallback applies. Neither reviewed recipe absence nor menu wording is an allergy-safety guarantee.
+
+## REC-02C — Customer-facing allergen exclusions and fail-closed eligibility
+
+This milestone is approved as a constrained exclusion feature, not a claim that a dish is allergy-safe. It applies only to the dedicated Rasa AI page at `/ai/recommendations`; Contact Us remains independent. The A2 form accepts optional `preferences_text` (string, maximum 300 characters) and/or `excluded_allergens[]`, whose values must be codes from the canonical `allergens` vocabulary: `peanut`, `tree_nuts`, `milk`, `egg`, `soy`, `wheat_gluten`, `fish`, `crustacean_shellfish`, `molluscs`, and `sesame`. At least one non-blank text value or one or more valid codes is required. Legacy structured preference selectors (`category`, `spice_level`, `protein`, `dietary`, `flavor`) remain prohibited. Explicit English and Malay allergen mentions in text are mapped to these codes, merged with checkbox values and deduplicated. Generic/unspecified allergy or intolerance requests and unmapped allergen/intolerance requests (including garlic, MSG, strawberry, histamine, nightshade, or FODMAP) fail closed: show the staff-confirmation notice and make zero provider calls.
+
+Supported explicit phrase mappings are peanut/kacang tanah; tree nuts/kacang pohon; milk/dairy/lactose/susu/tenusu; egg/telur; soy/soya; wheat/gluten/coeliac/celiac/gandum; fish/ikan; crustacean shellfish/prawn/shrimp/crab/udang/ketam; molluscs/clam/mussel/oyster/squid/kerang/sotong/tiram; and sesame/bijan. These are recognition aliases only, not ingredient evidence.
+
+When exclusions are requested, candidates come directly from available menu items in active categories. For each excluded code, a current assessment row is authoritative: only `isCurrentFor($item)`, `reviewed_absent` recipe status, `reviewed_no_known_risk` cross-contact status, and complete reviewer/time/evidence provenance qualify; current risky/unknown statuses, stale fingerprints, invalidation, and incomplete rows exclude the item. If no row exists for that item/code, deterministic English/Malay ingredient-term matching runs against its name and description, including explicit negative phrases such as `peanut-free`, `no nuts`, and `without egg`; a match excludes the item and no match allows it to proceed with a menu-check badge and staff-confirmation caution. An existing stale row never falls back to text analysis. Apply the same eligibility check before provider invocation and to provider-returned IDs. If no candidates qualify, return no recommendations and do not call a provider.
+
+For returned results, show the shared-kitchen caution and distinguish current documented reviews (`Reviewed: [allergen] not listed in recipe · No known cross-contact risk`) from no-row menu checks (`Menu check: [allergen] not listed in dish name or description · Confirm with staff`). Menu text is a deterministic filtering fallback only, not verification of ingredients or kitchen handling. Customers must inform staff before ordering. “Allergy-safe”, “allergen-free”, “100% safe”, and equivalent guarantees are prohibited in UI, badges, and provider prompts. Relevant menu changes or manual assessment invalidation make an existing assessment ineligible until re-reviewed.

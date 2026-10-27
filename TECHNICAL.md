@@ -12,11 +12,11 @@ Le Miting — Technical Design
 
 ## 1. Technical Overview
 
-Le Miting is a server-rendered web application built with Laravel. It provides restaurant menu browsing, guest food ordering, table reservation, food pre-ordering, FIUU payment, PDF receipts, customer feedback, AI menu recommendations, and an administrator management panel.
+Le Miting is a server-rendered web application built with Laravel. It provides restaurant menu browsing, guest food ordering, table reservation, food pre-ordering, FIUU payment, PDF receipts, AI menu recommendations, and an administrator management panel.
 
 The application follows a centralised Laravel MVC architecture. Laravel handles routing, business logic, authentication, session management, signed URLs, database access, external integrations, and email. The frontend is rendered server-side using Blade and Tailwind CSS.
 
-Customers access the system as guests — no account or login required. Administrators authenticate through a dedicated login to access the protected admin panel. Certain guest actions (receipt download, reservation cancellation, feedback form) are secured with Laravel signed URLs instead of accounts.
+Customers access the system as guests — no account or login required. Administrators authenticate through a dedicated login to access the protected admin panel. Receipt download and reservation cancellation use Laravel signed URLs instead of accounts.
 
 ---
 
@@ -35,7 +35,6 @@ Customers access the system as guests — no account or login required. Administ
 | Payment gateway | FIUU |
 | PDF generation | Laravel DomPDF (`barryvdh/laravel-dompdf`) |
 | Email | Laravel Mail |
-| QR code generation | `simplesoftwareio/simple-qrcode` |
 | Version control | Git + GitHub |
 | Development environment | VS Code |
 
@@ -113,7 +112,6 @@ Routes are grouped into three categories:
 **Signed URL guest routes** — no auth, Laravel signed URL required:
 - Receipt download (`/orders/{order}/receipt`)
 - Reservation cancellation confirmation
-- Feedback form (bound to a specific order or reservation)
 
 **Admin routes** — `auth` + `EnsureAdminRole` middleware:
 - `/admin/login`
@@ -123,7 +121,6 @@ Routes are grouped into three categories:
 - `/admin/tables`
 - `/admin/menu/categories`
 - `/admin/menu/items`
-- `/admin/feedback`
 - `/admin/reports`
 
 ---
@@ -139,7 +136,6 @@ app/
 │   │   ├── OrderController.php
 │   │   ├── CheckoutController.php
 │   │   ├── ReservationController.php
-│   │   ├── FeedbackController.php
 │   │   ├── AiRecommendationController.php
 │   │   ├── ContactController.php
 │   │   └── Admin/
@@ -149,7 +145,6 @@ app/
 │   │       ├── TableController.php
 │   │       ├── MenuCategoryController.php
 │   │       ├── MenuItemController.php
-│   │       ├── FeedbackController.php
 │   │       └── ReportController.php
 │   └── Middleware/
 │       └── EnsureAdminRole.php
@@ -163,12 +158,11 @@ app/
 │   ├── Payment.php
 │   ├── Reservation.php
 │   ├── ReservationFood.php
-│   └── Feedback.php
 ├── Mail/
 │   ├── OrderConfirmationMail.php
 │   ├── ReservationConfirmationMail.php
 │   ├── ReservationCancellationMail.php
-│   ├── FeedbackInvitationMail.php
+│   ├── GoogleReviewInvitationMail.php
 │   └── ContactEnquiryMail.php
 └── Services/
     ├── OpenAiService.php
@@ -187,7 +181,6 @@ resources/
     │   ├── checkout/
     │   ├── orders/
     │   ├── reservations/
-    │   ├── feedback/
     │   └── contact/
     └── admin/
         ├── dashboard/
@@ -218,7 +211,6 @@ order_items
 payments
 reservations
 reservation_foods
-feedback
 ```
 
 `menu_items` uses soft deletes so historical `order_items` and `reservation_foods` records remain valid after a menu item is deactivated.
@@ -239,7 +231,6 @@ Protected guest actions use Laravel signed URLs (`URL::temporarySignedRoute`):
 |---|---|
 | Receipt download | Signed URL emailed with order confirmation |
 | Reservation cancellation | Signed URL emailed with reservation confirmation |
-| Feedback form | Signed URL emailed with feedback invitation |
 
 A missing, tampered, or expired signature returns a generic "link no longer valid" error — never a hint about which part failed, never a fallback to raw ID access.
 
@@ -276,13 +267,13 @@ Availability is checked inside a database transaction with row locking so concur
 
 **15-minute payment hold (table_and_food only):** a `pending` reservation blocks its slot immediately. If FIUU payment is not verified within 15 minutes of creation, the availability query excludes that stale `pending` row from overlap checks going forward — freeing the slot without requiring a scheduled job.
 
-QR code: generated via `simplesoftwareio/simple-qrcode` after confirmation. The QR payload is the `reservation_number`. It is used strictly for check-in validation — not for feedback, cancellation, or any other action.
+The unique readable `reservation_number` is displayed after confirmation and used for administrator lookup/check-in validation. It is not a credential for cancellation or any other protected action.
 
 ---
 
 ## 11. Order Architecture
 
-Two order types: `dine_in`, `takeaway`.
+Two order types: `dine-in`, `takeaway`.
 
 Each order captures `customer_name`, `customer_email`, `customer_phone`, `order_number`, `order_type`, `status`, `total`, and `notes`.
 
@@ -297,6 +288,8 @@ Each order captures `customer_name`, `customer_email`, `customer_phone`, `order_
 FIUU is the payment gateway for:
 - Standalone food orders
 - `table_and_food` reservations
+
+In development and demonstrations, `MockPaymentService` redirects the pending payment to a signed mock gateway instead. The gateway accepts only a fake method and controlled demo outcome, derives all transaction data server-side, and uses a mock-only HMAC derived from `APP_KEY` with an explicit domain label. Its verified result follows the same callback/application and idempotent `PaymentApplier` lifecycle as FIUU; a browser return only reads stored state. No real funds or financial credentials are processed, and this mock does not establish FIUU protocol compatibility.
 
 Payment lifecycle:
 
@@ -329,11 +322,7 @@ Rules:
 
 ## 13. Rasa AI (OpenAI Integration)
 
-OpenAI API powers Rasa AI, Le Miting's optional menu recommendation feature. Rasa AI appears on two surfaces:
-- The Rasa AI page (FR-17)
-- The Contact Us page (FR-17b)
-
-Both surfaces use the same `OpenAiService` and identical logic — there is no second integration.
+Rasa AI is available only on its dedicated page (FR-17). The existing `AiRecommender` interface supports deterministic mock mode (default) and the configurable `OpenAiService`; Contact Us does not embed recommendations.
 
 Flow:
 
@@ -342,9 +331,9 @@ Customer enters preferences
       |
 Laravel retrieves currently available menu items
       |
-OpenAiService sends items + preferences to OpenAI API
+AiRecommender receives eligible items + interpreted preferences (mock by default; OpenAI when configured)
       |
-OpenAI returns recommendation response
+Provider returns up to three candidate menu-item IDs
       |
 Laravel validates response — maps to real menu_items rows (is_available = true)
       |
@@ -352,6 +341,8 @@ Items not matching a real available menu item are dropped
       |
 Validated recommendations displayed to customer
 ```
+
+On the dedicated Rasa AI page, the guest submits bounded free text and/or controlled allergen exclusions; legacy structured preference selectors are not exposed. Laravel interprets recognized wording into internal filters and enforces price, availability, active-category, and attribute constraints before provider selection and again on returned IDs. A budget limits each dish, not the combined recommendations. REC-02C adds the narrowly defined assessment-backed exclusion contract below; it does not authorize safety claims.
 
 The AI may only recommend items that exist in the database and are currently available. The OpenAI API key is stored in `.env` and never exposed in frontend code or client-side JavaScript. The feature is optional — failure falls back gracefully without breaking the page.
 
@@ -363,13 +354,13 @@ Five confirmed Mailables:
 
 | Mailable | Trigger | Contains |
 |---|---|---|
-| `OrderConfirmationMail` | Order placed (`pending`) | Order summary, signed receipt link |
-| `ReservationConfirmationMail` | Reservation confirmed | Reservation details, QR code, signed cancellation link |
+| `OrderConfirmationMail` | Payment verified (`Order.status` → `confirmed`) | Order summary, signed receipt link |
+| `ReservationConfirmationMail` | Reservation confirmed | Reservation details, readable reservation number, signed cancellation link |
 | `ReservationCancellationMail` | Reservation cancelled | Cancellation confirmation |
-| `FeedbackInvitationMail` | Order or reservation → `completed` | Signed feedback form link |
+| `GoogleReviewInvitationMail` | Order or reservation → `completed` | Optional link to the configured external Google Review destination |
 | `ContactEnquiryMail` | Contact Us form submitted | Customer name, email, message — sent to the restaurant |
 
-No `PaymentConfirmationMail` exists as a separate Mailable. The PDF receipt is attached to `OrderConfirmationMail` (generated on demand by `ReceiptService` after payment is verified). `ReservationConfirmationMail` includes the QR code.
+No `PaymentConfirmationMail` exists as a separate Mailable. The PDF receipt is attached to `OrderConfirmationMail` (generated on demand by `ReceiptService` after payment is verified). `ReservationConfirmationMail` includes the readable reservation number.
 
 Email is sent synchronously (no queue) for V1. At this scale, inline sending adds negligible response time. Switch to Laravel's `database` queue driver if email latency becomes measurable — not Redis.
 
@@ -393,37 +384,19 @@ Receipts are generated fresh from `orders`/`order_items`/`payments` each time �
 
 ---
 
-## 16. QR Code Generation
+## 16. Reservation Identifier
 
-Library: `simplesoftwareio/simple-qrcode`.
-
-QR codes are generated server-side after a reservation is confirmed. The payload is the `reservation_number` string. The image is embedded in the `ReservationConfirmationMail` and displayable on the reservation confirmation page.
-
-The QR code is a convenience for check-in validation only. It does not carry signed URL data, feedback links, or any other action. The reservation record in the database remains the authoritative source.
+Each reservation receives a unique readable `reservation_number`. It is displayed in the `ReservationConfirmationMail`, the reservation confirmation page, and administrator records for lookup/check-in validation. It carries no signed-link authority; the database record remains authoritative.
 
 ---
 
-## 17. Customer Feedback and Google Review Redirect
+## 17. External Google Review Invitation
 
-Feedback is stored in the Laravel application's `feedback` table.
+Le Miting does not collect, store, manage, or display customer feedback internally. There is no feedback table, form, signed feedback URL, or administrator feedback feature.
 
-Flow:
+When an order or reservation first reaches `completed`, `GoogleReviewInvitationMail` may invite the guest to the configured external Google Review destination. Leaving a review is optional. Google receives and stores any submitted review; Le Miting neither submits reviews nor reads, copies, or stores their content.
 
-```text
-Order / Reservation → completed
-      |
-FeedbackInvitationMail sent (signed link)
-      |
-Customer opens feedback form
-      |
-Feedback saved to MySQL
-      |
-Thank-you page with optional Google Review link
-      |
-Customer clicks link → Google Review page opens in new tab
-```
-
-The Google integration is a static link to the restaurant's Google review page. No Google Places API is used. No review data is sent to or retrieved from Google. The link does not carry feedback data.
+The integration is a configured static link. No Google Maps, Places, or other Google API is used, and the link contains no internal order or reservation identifier.
 
 ---
 
@@ -432,7 +405,7 @@ The Google integration is a static link to the restaurant's Google review page. 
 The Contact Us page provides:
 - Restaurant contact information (address, phone, email, operating hours)
 - An enquiry form (name, email, message) that triggers `ContactEnquiryMail` to the restaurant
-- The Rasa AI recommendation widget (same `OpenAiService` used on the main AI page)
+- No embedded Rasa AI form; recommendations remain on the dedicated page
 
 The enquiry form does not create any database record. It is a one-way email to the restaurant. No reply system is in scope.
 
@@ -479,10 +452,6 @@ Menu items have an `is_available` boolean. Setting `is_available = false` hides 
          Laravel Application
                |
                v
-       simplesoftwareio
-       /simple-qrcode
-       (server-side only)
-
          Laravel Application
                |
                v
@@ -556,13 +525,12 @@ Local `.env` credentials must not be used in production.
 | TD-04 | Guest customer access | No accounts removes registration friction for V1 |
 | TD-05 | Laravel signed URLs | Secure guest access without accounts |
 | TD-06 | FIUU | Required payment gateway for this project |
-| TD-07 | OpenAI API | AI menu recommendations — single integration, two surfaces (AI page + Contact Us) |
+| TD-07 | OpenAI API | Optional AI provider behind AiRecommender; mock default, dedicated Rasa AI page only |
 | TD-08 | DomPDF | Server-side PDF; PRD-specified; sufficient for receipt and report layouts |
 | TD-09 | Laravel Mail | Transactional email; synchronous for V1 |
-| TD-10 | `simplesoftwareio/simple-qrcode` | Blade-friendly, server-side QR generation; no JS dependency |
-| TD-11 | Apache on Exabytes | Hosting environment requirement |
-| TD-12 | Single admin role | No multi-tier staff requirement in PRD |
-| TD-13 | Static Google Review link | No API needed — a direct link achieves the requirement |
+| TD-10 | Apache on Exabytes | Hosting environment requirement |
+| TD-11 | Single admin role | No multi-tier staff requirement in PRD |
+| TD-12 | Static Google Review link | No API needed — a direct link achieves the requirement |
 | TD-14 | Menu item soft deletes | Preserves historical order/reservation integrity when items are removed |
 | TD-15 | `total` only (no subtotal) | Discounts and taxes are out of V1 scope |
 | TD-16 | No receipt persistence | Receipts generated on demand from live DB data; no `receipts` table needed |
@@ -580,7 +548,6 @@ Local `.env` credentials must not be used in production.
 - MySQL is the database.
 - FIUU is the payment gateway.
 - OpenAI API is the AI service.
-- `simplesoftwareio/simple-qrcode` is the QR library.
 - DomPDF is the PDF library.
 - Laravel Mail handles all application email.
 - Apache is the production web server (Exabytes).
@@ -592,3 +559,21 @@ Local `.env` credentials must not be used in production.
 - AI recommendations use only available, real `menu_items` rows.
 - Google review uses a static link — no Google API.
 - No scheduled jobs are required for correctness (the 15-minute hold is enforced by query logic, not a cron).
+
+---
+
+## REC-02B — Allergen storage and concurrency
+
+The normalized `allergens` reference table holds ten controlled vocabulary entries. `menu_item_allergen_assessments` has foreign keys to menu_items, allergens and reviewer/invalidator users, plus a unique menu-item/allergen pair. Recipe and cross-contact enum columns are independent. Required review provenance is reviewed_by, reviewed_at (UTC), evidence and a recipe-related menu fingerprint. Optional invalidation provenance is an all-or-none timestamp/user/reason tuple. MySQL CHECK constraints reject blank evidence and incomplete invalidation metadata.
+
+No assessment rows are backfilled. Saves and invalidation lock the menu-item row inside a transaction, serializing reviews with admin menu edits. A context fingerprint rejects stale forms. The menu fingerprint also makes changed metadata read as stale. This is a current-assessment store, not an immutable revision ledger; a new review replaces prior review values.
+
+The new migration is exercised only by guarded MySQL tests in REC-02B. Development activation requires migration deployment; the isolated demo's historical 18-migration authorization is intentionally unchanged and rejects the expanded chain.
+
+## REC-02C — Customer allergen-exclusion contract
+
+The dedicated page `/ai/recommendations` accepts `preferences_text` (optional string, maximum 300 characters) and/or `excluded_allergens[]` (one or more canonical `allergens.code` values: `peanut`, `tree_nuts`, `milk`, `egg`, `soy`, `wheat_gluten`, `fish`, `crustacean_shellfish`, `molluscs`, `sesame`). Require at least one non-blank text value or valid exclusion code. Continue rejecting legacy customer preference selectors (`category`, `spice_level`, `protein`, `dietary`, `flavor`). Map only explicit supported English/Malay allergen phrases into codes, merge and deduplicate them with checkbox values. Generic or unspecified allergy/intolerance requests and unmapped allergens/intolerances fail closed with the staff-confirmation notice and zero provider calls.
+
+Build candidates from available menu items in active categories before invoking either provider. For each requested exclusion, an existing assessment row overrides menu text: it qualifies only when current for the item, `reviewed_absent` for recipe status, `reviewed_no_known_risk` for cross-contact status, and complete in reviewer, UTC review time, and non-blank evidence. Any stale/invalidated row, incomplete provenance, unknown/contains recipe status, or unknown/possible cross-contact status excludes the item. Only when no row exists, use deterministic canonical English/Malay term matching on the item's name and description; ignore explicitly negated phrases (for example, `peanut-free`, `no nuts`, or `without egg`). A positive match excludes the item; no match allows it with a menu-check badge and staff-confirmation caution. Reuse the same rule for provider-returned IDs. Empty candidates produce an empty result and a staff-confirmation notice without a provider call. Providers cannot establish eligibility or supply authoritative prices, availability, or allergen facts.
+
+Render the shared-kitchen caution and use a factual per-item badge: `Reviewed: [allergen] not listed in recipe · No known cross-contact risk` for a qualifying current row, or `Menu check: [allergen] not listed in dish name or description · Confirm with staff` when no row exists. Menu text matching is not ingredient or cross-contact verification. Customers must inform staff before ordering. Never use “allergy-safe”, “allergen-free”, “100% safe”, or equivalent claims in the interface or provider prompts. Existing relevant menu-fingerprint/revision changes and manual invalidation disqualify an assessment until a new review.

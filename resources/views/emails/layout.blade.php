@@ -11,6 +11,11 @@
         .brand span { color: #b3541e; }
         .h1 { font-size: 22px; font-weight: 700; margin: 16px 0 8px; }
         .muted { color: #8a8178; font-size: 13px; line-height: 1.6; }
+        .enquiry-text { white-space: pre-line; margin-top: 16px; }
+        .mt-8 { margin-top: 8px; }
+        .mt-12 { margin-top: 12px; }
+        .mt-16 { margin-top: 16px; }
+        .email-heading { font-size: 15px; margin: 20px 0 8px; }
         .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
         .row dt { color: #8a8178; font-weight: 600; margin: 0; }
         .row dd { margin: 0; font-weight: 600; color: #2d2a26; }

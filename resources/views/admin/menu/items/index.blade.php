@@ -13,19 +13,19 @@
                 class="rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
             >
             <label for="category" class="sr-only">Filter by category</label>
-            <select id="category" name="category" onchange="this.form.submit()" class="rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text">
+            <select id="category" name="category" class="rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text">
                 <option value="">All categories</option>
                 @foreach ($categories as $category)
                     <option value="{{ $category->id }}" @selected((string) $currentCategory === (string) $category->id)>{{ $category->name }}</option>
                 @endforeach
             </select>
-            <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">Search</button>
+            <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">Apply filters</button>
             @if ($search || $currentCategory)
-                <a href="{{ route('admin.menu.items.index') }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800">Clear</a>
+                <a href="{{ route('admin.menu.items.index') }}" class="lm-admin-target text-sm font-semibold text-brand-700 hover:text-brand-800">Clear</a>
             @endif
         </form>
 
-        <a href="{{ route('admin.menu.items.create') }}" class="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
+        <a href="{{ route('admin.menu.items.create') }}" class="lm-admin-target rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
             Add item
         </a>
     </div>
@@ -43,12 +43,12 @@
             <table class="min-w-full divide-y divide-brand-100 text-sm">
                 <thead class="bg-brand-50">
                     <tr>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Item</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Category</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Price</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Availability</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text">Featured</th>
-                        <th class="px-5 py-3 text-left font-semibold text-text"></th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Item</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Category</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Price</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Availability</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text">Featured</th>
+                        <th scope="col" class="px-5 py-3 text-left font-semibold text-text"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-brand-100">
@@ -73,10 +73,25 @@
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit" class="text-sm font-semibold {{ $item->is_available ? 'text-red-700 hover:text-red-800' : 'text-green-700 hover:text-green-800' }}">
-                                            {{ $item->is_available ? 'Deactivate' : 'Activate' }}
+                                            {{ $item->is_available ? 'Deactivate' : 'Activate' }} <span class="sr-only">menu item {{ $item->name }}</span>
                                         </button>
                                     </form>
-                                    <a href="{{ route('admin.menu.items.edit', $item) }}" class="font-semibold text-brand-700 hover:text-brand-800">Edit →</a>
+                                    <form method="POST" action="{{ route('admin.menu.items.destroy', $item) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="button" class="text-sm font-semibold text-red-700 hover:text-red-800" data-menu-item-remove-open>
+                                            Remove <span class="sr-only">menu item {{ $item->name }}</span>
+                                        </button>
+                                        <dialog aria-labelledby="remove-item-title-{{ $item->id }}" aria-describedby="remove-item-description-{{ $item->id }}" data-menu-item-remove-dialog class="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md overflow-y-auto whitespace-normal rounded-md border border-line bg-ivory p-6 text-left text-espresso shadow-sm backdrop:bg-espresso/60">
+                                            <h2 id="remove-item-title-{{ $item->id }}" class="text-lg font-semibold">Remove {{ $item->name }}?</h2>
+                                            <p id="remove-item-description-{{ $item->id }}" class="mt-3 text-sm">This removes the item from the customer menu. Historical order and reservation records are preserved.</p>
+                                            <div class="mt-6 flex flex-wrap justify-end gap-3">
+                                                <button type="button" class="lm-button lm-button--secondary" data-menu-item-remove-cancel>Cancel</button>
+                                                <button type="submit" class="lm-button lm-button--danger">Remove item</button>
+                                            </div>
+                                        </dialog>
+                                    </form>
+                                    <a href="{{ route('admin.menu.items.edit', $item) }}" class="font-semibold text-brand-700 hover:text-brand-800">Edit <span class="sr-only">menu item {{ $item->name }}</span> →</a>
                                 </div>
                             </td>
                         </tr>

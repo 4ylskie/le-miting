@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\MenuItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -15,6 +16,14 @@ test('the admin login page renders', function () {
         ->assertOk()
         ->assertSee('Admin Login')
         ->assertSee('Sign in');
+});
+
+test('an authenticated administrator visiting the login page is redirected to the dashboard', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    $this->actingAs($admin)
+        ->get(route('admin.login'))
+        ->assertRedirect(route('admin.dashboard'));
 });
 
 test('an administrator can log in and is sent to the dashboard', function () {
@@ -59,6 +68,19 @@ test('an authenticated non-admin cannot access the admin panel', function () {
 
     $this->actingAs($customer)
         ->get(route('admin.dashboard'))
+        ->assertForbidden();
+});
+
+test('guests and non-admins cannot mutate menu items', function () {
+    $item = MenuItem::factory()->create();
+
+    $this->patch(route('admin.menu.items.toggle-availability', $item))
+        ->assertRedirect(route('admin.login'));
+
+    $customer = User::factory()->create(['role' => 'customer']);
+
+    $this->actingAs($customer)
+        ->delete(route('admin.menu.items.destroy', $item))
         ->assertForbidden();
 });
 

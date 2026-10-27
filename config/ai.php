@@ -16,6 +16,6 @@ return [
 
     'model' => env('AI_MODEL', 'gpt-4o-mini'),
 
-    'max_recommendations' => 6,
+    'max_recommendations' => 3,
 
 ];

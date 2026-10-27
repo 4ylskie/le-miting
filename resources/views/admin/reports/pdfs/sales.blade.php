@@ -1,9 +1,11 @@
 @include('admin.reports.pdfs.report-head')
+@inject('businessTime', 'App\Services\BusinessTime')
 
 <h2>{{ ucfirst($period) }} Sales Report</h2>
 <p class="muted">
-    Reporting period: {{ $periodLabel }} · {{ $from->format('d M Y') }} to {{ $generatedAt->format('d M Y') }}
-    · Generated {{ $generatedAt->format('d M Y, g:i A') }}
+    Reporting period: {{ $periodLabel }} · {{ $businessTime->local($from)->format('d M Y, H:i:s') }} MYT (inclusive)
+    to {{ $businessTime->local($generatedAt)->format('d M Y, H:i:s') }} MYT (exclusive)
+    · Generated {{ $businessTime->local($generatedAt)->format('d M Y, H:i:s') }} MYT
 </p>
 
 <div class="summary">
@@ -19,20 +21,20 @@
         <thead>
             <tr>
                 <th>Item</th>
-                <th style="text-align:right;">Quantity sold</th>
+                <th class="text-right">Quantity sold</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($data['popular_items'] as $item)
                 <tr>
                     <td>{{ $item->item_name }}</td>
-                    <td style="text-align:right;">{{ number_format($item->total_quantity) }}</td>
+                    <td class="text-right">{{ number_format($item->total_quantity) }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 @else
-    <p class="muted">No orders were recorded in this period.</p>
+    <p class="muted">No qualifying sold items were recorded in this period.</p>
 @endif
 
 <div class="footer">Confidential — for Le Miting management use only.</div>

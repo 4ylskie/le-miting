@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Models\Payment;
+use Illuminate\Support\Arr;
 
 class FiuuPaymentService implements PaymentProcessor
 {
@@ -29,12 +30,12 @@ class FiuuPaymentService implements PaymentProcessor
 
     public function verify(array $payload): Payment
     {
-        $reference = $payload['bill_code'] ?? $payload['reference'] ?? null;
-        $status = $payload['status'] ?? $payload['bill_status'] ?? null;
-        $amount = $payload['bill_amount'] ?? $payload['amount'] ?? null;
+        $reference = $this->callbackField($payload, 'bill_code', 'reference');
+        $status = $this->callbackField($payload, 'bill_status', 'status');
+        $amount = $this->callbackField($payload, 'bill_amount', 'amount');
 
-        if (! $reference) {
-            throw new \InvalidArgumentException('Missing payment reference.');
+        if (! is_numeric($amount) || ! is_finite((float) $amount)) {
+            throw new \InvalidArgumentException('Invalid payment amount.');
         }
 
         $payment = Payment::where('provider_reference', $reference)->first();
@@ -43,14 +44,15 @@ class FiuuPaymentService implements PaymentProcessor
             throw new \InvalidArgumentException('Unknown payment reference.');
         }
 
-        if (! $this->callbackSignatureIsValid($payload)) {
+        if (! $this->callbackSignatureIsValid($reference, $amount, $status, $payload['signature'] ?? null)) {
             throw new \InvalidArgumentException('Invalid payment signature.');
         }
 
-        if ($amount !== null && abs((float) $amount - (float) $payment->amount) > 0.01) {
+        if (abs((float) $amount - (float) $payment->amount) > 0.01) {
             return app(PaymentApplier::class)->applyFailedPayment([
                 'reference' => $reference,
                 'amount' => $amount,
+                'raw_response' => $this->callbackAuditData($payload),
             ]);
         }
 
@@ -59,12 +61,14 @@ class FiuuPaymentService implements PaymentProcessor
                 'reference' => $reference,
                 'amount' => $amount,
                 'currency' => 'MYR',
+                'raw_response' => $this->callbackAuditData($payload),
             ]);
         }
 
         return app(PaymentApplier::class)->applyFailedPayment([
             'reference' => $reference,
             'amount' => $amount,
+            'raw_response' => $this->callbackAuditData($payload),
         ]);
     }
 
@@ -73,15 +77,57 @@ class FiuuPaymentService implements PaymentProcessor
         return md5(config('payment.fiuu.secret_key').$params['merchant_id'].$params['bill_code']);
     }
 
-    private function callbackSignatureIsValid(array $payload): bool
+    /**
+     * Resolve existing adapter aliases without changing the signed text.
+     * Both aliases, when supplied, must represent the same exact text.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function callbackField(array $payload, string $field, string $alias): string
+    {
+        $values = [];
+
+        foreach ([$field, $alias] as $key) {
+            if (! array_key_exists($key, $payload)) {
+                continue;
+            }
+
+            $value = $payload[$key];
+
+            if ((! is_string($value) && ! is_int($value) && ! is_float($value)) || (string) $value === '') {
+                throw new \InvalidArgumentException('Malformed payment callback.');
+            }
+
+            $values[] = (string) $value;
+        }
+
+        if ($values === [] || (count($values) === 2 && $values[0] !== $values[1])) {
+            throw new \InvalidArgumentException('Missing or conflicting payment callback fields.');
+        }
+
+        return $values[0];
+    }
+
+    private function callbackSignatureIsValid(string $reference, string $amount, string $status, mixed $signature): bool
     {
         $secret = (string) config('payment.fiuu.secret_key');
-        $reference = $payload['bill_code'] ?? $payload['reference'] ?? '';
-        $amount = $payload['bill_amount'] ?? $payload['amount'] ?? '';
-        $status = $payload['bill_status'] ?? $payload['status'] ?? '';
 
         $expected = md5($secret.$reference.$amount.$status);
 
-        return isset($payload['signature']) && hash_equals($expected, (string) $payload['signature']);
+        return is_string($signature) && hash_equals($expected, $signature);
+    }
+
+    /**
+     * Keep only the callback fields already used by this integration.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function callbackAuditData(array $payload): array
+    {
+        return array_filter(
+            Arr::only($payload, ['bill_code', 'reference', 'bill_status', 'status', 'bill_amount', 'amount', 'currency']),
+            static fn (mixed $value): bool => $value !== null,
+        );
     }
 }

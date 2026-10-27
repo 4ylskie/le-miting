@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
+use App\Services\BusinessTime;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +31,7 @@ class Reservation extends Model
     ];
 
     protected $casts = [
+        'checked_in_at' => 'datetime',
         'reservation_date' => 'date',
         'guest_count' => 'integer',
         'duration_minutes' => 'integer',
@@ -38,6 +40,13 @@ class Reservation extends Model
     public function table(): BelongsTo
     {
         return $this->belongsTo(Table::class);
+    }
+
+    public function canCheckIn(): bool
+    {
+        return $this->status === 'confirmed'
+            && $this->checked_in_at === null
+            && $this->reservation_date_time->lessThanOrEqualTo(app(BusinessTime::class)->now());
     }
 
     public function reservationFoods(): HasMany
@@ -50,17 +59,12 @@ class Reservation extends Model
         return $this->hasOne(Payment::class);
     }
 
-    public function feedback(): HasOne
+    public function getReservationDateTimeAttribute(): CarbonImmutable
     {
-        return $this->hasOne(Feedback::class);
+        return app(BusinessTime::class)->reservationStart($this->reservation_date->format('Y-m-d'), $this->reservation_time);
     }
 
-    public function getReservationDateTimeAttribute(): Carbon
-    {
-        return Carbon::parse($this->reservation_date->format('Y-m-d').' '.$this->reservation_time);
-    }
-
-    public function getEndDateTimeAttribute(): Carbon
+    public function getEndDateTimeAttribute(): CarbonImmutable
     {
         return $this->reservation_date_time->copy()->addMinutes($this->duration_minutes);
     }

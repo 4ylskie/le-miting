@@ -4,11 +4,19 @@
 @source '../../storage/framework/views/*.php';
 @source '../../resources/views/**/*.blade.php';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+:root {
+    --lm-brand-font: 'DM Serif Display', Georgia, serif;
+    --lm-brand-mark-h: 2.05rem;
+    --lm-brand-text-size: 1.55rem;
+    --lm-brand-text-tracking: 0.02em;
+    --lm-brand-gap: 0.65rem;
+    --lm-brand-full-h: 4rem;
+}
 
-    /* Le Miting brand colors — warm, earthy, kampung-inspired */
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* Legacy tokens remain until customer pages migrate; the admin also uses this bundle. */
     --color-brand-50: #fdf8f0;
     --color-brand-100: #f9edda;
     --color-brand-200: #f2d7b0;
@@ -30,3 +38,1141 @@
     --color-text: #1a1208;
     --color-text-muted: #6b5d4f;
 }
+
+.lm-brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lm-brand-gap);
+    color: inherit;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.lm-brand-lockup--sm {
+    --lm-brand-mark-h: 1.62rem;
+    --lm-brand-text-size: 1.25rem;
+    --lm-brand-gap: 0.5rem;
+    --lm-brand-full-h: 3rem;
+}
+
+.lm-brand-lockup--md {
+    --lm-brand-mark-h: 2.05rem;
+    --lm-brand-text-size: 1.55rem;
+    --lm-brand-gap: 0.65rem;
+    --lm-brand-full-h: 4rem;
+}
+
+.lm-brand-lockup--lg {
+    --lm-brand-mark-h: 2.5rem;
+    --lm-brand-text-size: 1.95rem;
+    --lm-brand-gap: 0.75rem;
+    --lm-brand-full-h: 5rem;
+}
+
+.lm-brand-lockup--xl {
+    --lm-brand-mark-h: 3.05rem;
+    --lm-brand-text-size: 2.35rem;
+    --lm-brand-gap: 0.85rem;
+    --lm-brand-full-h: 6rem;
+}
+
+.lm-brand-original-emblem {
+    display: block;
+    flex: none;
+    width: auto;
+    height: var(--lm-brand-mark-h);
+    object-fit: contain;
+}
+
+.lm-brand-original-full {
+    display: block;
+    width: auto;
+    height: var(--lm-brand-full-h);
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.lm-brand-wordmark {
+    font-family: var(--lm-brand-font);
+    font-size: var(--lm-brand-text-size);
+    font-weight: 400;
+    letter-spacing: var(--lm-brand-text-tracking);
+    white-space: nowrap;
+}
+
+.lm-brand-lockup--customer,
+.lm-brand-lockup--admin,
+.lm-brand-lockup--footer {
+    color: #C9CCBE;
+}
+
+.lm-brand-lockup--auth {
+    color: #7E826D;
+}
+
+/* Keep the foundation available before later checkpoints adopt its classes. */
+@theme static {
+    --font-display: 'DM Serif Display', Georgia, ui-sans-serif, system-ui, sans-serif;
+
+    --color-espresso: #211B17;
+    --color-charcoal: #302B27;
+    --color-bone: #F4F0E8;
+    --color-ivory: #FCFAF6;
+    --color-mineral: #746F68;
+    --color-line: #D8D1C6;
+    --color-earth: #975B3E;
+    --color-danger: #A43C32;
+
+    --text-lm-display: clamp(3rem, 7vw, 6.5rem);
+    --text-lm-display--line-height: 1;
+    --text-lm-h1: clamp(2.5rem, 5vw, 4.5rem);
+    --text-lm-h1--line-height: 1;
+    --text-lm-h2: clamp(2rem, 3.5vw, 3.25rem);
+    --text-lm-h2--line-height: 1.1;
+    --text-lm-h3: 1.25rem;
+    --text-lm-h3--line-height: 1.25;
+    --text-lm-body: 1rem;
+    --text-lm-body--line-height: 1.6;
+    --text-lm-meta: 0.875rem;
+    --text-lm-meta--line-height: 1.5;
+    --text-lm-label: 0.75rem;
+    --text-lm-label--line-height: 1.5;
+    --tracking-lm-label: 0.08em;
+
+    --container-lm-page: 80rem;
+    --spacing-lm-section: clamp(4.5rem, 8vw, 9rem);
+    --radius-lm: 0.25rem;
+}
+
+@layer base {
+    :root {
+        --lm-gutter: 1.25rem;
+        --lm-space-xs: 0.5rem;
+        --lm-space-sm: 1rem;
+        --lm-space-md: 1.5rem;
+        --lm-space-lg: 2rem;
+        --lm-space-xl: 3rem;
+        --lm-touch: 2.75rem;
+        --lm-border: 1px;
+        --lm-duration: 200ms;
+        --lm-ease: ease-out;
+    }
+
+    @media (min-width: 48rem) {
+        :root { --lm-gutter: 2rem; }
+    }
+
+    @media (min-width: 64rem) {
+        :root { --lm-gutter: 3rem; }
+    }
+}
+
+/* Opt-in customer primitives: no global heading, form, or legacy palette overrides. */
+@layer components {
+    .lm-admin {
+        --color-primary: #B85D3B;
+        --color-primary-dark: #8F3424;
+        --color-accent: #E7A26E;
+        --color-brand-50: rgba(38, 27, 22, 0.78);
+        --color-brand-100: rgba(216, 180, 148, 0.22);
+        --color-brand-200: rgba(216, 180, 148, 0.38);
+        --color-brand-700: #E7A26E;
+        --color-brand-800: #FAF6F0;
+        --color-text: #FAF6F0;
+        --color-text-muted: #D5CBBF;
+        --color-mineral: #D5CBBF;
+        --color-line: rgba(216, 180, 148, 0.25);
+        position: relative;
+        isolation: isolate;
+        min-height: 100vh;
+        overflow-x: clip;
+        background: #140F0D;
+        color: #FAF6F0;
+    }
+
+    .lm-admin aside nav a[aria-current='page'] {
+        border-left-color: #c87d4b;
+        background: rgb(200 125 75 / 18%);
+        color: #fcfaf6;
+        font-weight: 600;
+    }
+
+    .lm-admin aside nav a:not([aria-current='page']):hover {
+        border-left-color: rgb(200 125 75 / 65%);
+        background: rgb(200 125 75 / 12%);
+        color: #fcfaf6;
+    }
+
+    .lm-admin :where([class~="bg-white"], [class~="bg-ivory"], [class~="bg-bone"], [class~="bg-brand-50"]) {
+        border-color: rgba(216, 180, 148, 0.25);
+        background-color: rgba(38, 27, 22, 0.78) !important;
+        color: #FAF6F0;
+        backdrop-filter: blur(18px);
+    }
+
+    .lm-admin :where([class~="text-espresso"], [class~="text-text"], [class~="text-brand-800"], [class~="text-brand-900"], [class~="text-charcoal"]) {
+        color: #FAF6F0 !important;
+    }
+
+    .lm-admin :where([class~="text-mineral"], [class~="text-text-muted"], [class~="text-brand-700"]) {
+        color: #D5CBBF !important;
+    }
+
+    .lm-admin :where([class~="border-line"], [class~="border-brand-100"], [class~="border-brand-200"]) {
+        border-color: rgba(216, 180, 148, 0.25) !important;
+    }
+
+    .lm-admin :is(input:not([type='hidden']):not([type='checkbox']), select, textarea) {
+        border-color: rgba(216, 180, 148, 0.5);
+        background-color: rgba(20, 15, 13, 0.88);
+        color: #FAF6F0;
+        color-scheme: dark;
+    }
+
+    .lm-admin :is(input, select, textarea, button, a):focus-visible {
+        outline: 3px solid #E7A26E;
+        outline-offset: 2px;
+    }
+
+    .lm-admin table thead {
+        background-color: rgba(184, 93, 59, 0.2);
+        color: #FAF6F0;
+    }
+
+    .lm-admin table thead th {
+        border-bottom: 1px solid rgba(216, 180, 148, 0.38);
+        font-size: 0.75rem;
+        letter-spacing: 0.035em;
+    }
+
+    .lm-admin table tbody tr:hover {
+        background-color: rgba(224, 145, 69, 0.12);
+    }
+
+    .lm-admin span.rounded-full {
+        border: 1px solid rgba(216, 180, 148, 0.35);
+        font-weight: 600;
+        line-height: 1.35;
+        white-space: nowrap;
+    }
+
+    .lm-admin :is(.bg-green-50, .bg-emerald-50) {
+        border: 1px solid rgba(113, 190, 139, 0.42);
+        background-color: rgba(35, 94, 59, 0.5);
+        color: #D2F3DA;
+    }
+
+    .lm-admin :is(.bg-red-50, .bg-rose-50) {
+        border: 1px solid rgba(255, 158, 145, 0.45);
+        background-color: rgba(143, 52, 36, 0.55);
+        color: #FFE0DA;
+    }
+
+    .lm-admin :is(.bg-yellow-50, .bg-amber-50) {
+        border: 1px solid rgba(240, 190, 102, 0.45);
+        background-color: rgba(130, 88, 29, 0.5);
+        color: #FFE8B5;
+    }
+
+    .lm-admin :is(.bg-brand-100, .bg-brand-50) {
+        background-color: rgba(184, 93, 59, 0.24);
+        color: #FAF6F0;
+    }
+
+    .lm-admin :is(.text-green-800, .text-emerald-800) { color: #D2F3DA; }
+    .lm-admin :is(.text-red-600, .text-red-700, .text-red-800) { color: #FFE0DA; }
+    .lm-admin :is(.text-yellow-800, .text-amber-800) { color: #FFE8B5; }
+
+    .lm-admin table { color: #FAF6F0; }
+
+    .lm-admin .rounded-xl.border {
+        box-shadow: 0 1px 2px rgb(33 27 23 / 8%);
+    }
+
+    .lm-admin .overflow-x-auto {
+        contain: paint;
+    }
+
+    .lm-admin :is(button, input:not([type='hidden']):not([type='checkbox']), select),
+    .lm-admin table a,
+    .lm-admin nav[role='navigation'] a,
+    .lm-admin-target {
+        min-width: var(--lm-touch);
+        min-height: var(--lm-touch);
+    }
+
+    .lm-admin table a,
+    .lm-admin nav[role='navigation'] a,
+    .lm-admin-target {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .lm-admin input[type='checkbox'] + label {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--lm-touch);
+    }
+
+    .lm-site {
+        background: var(--color-bone);
+        color: var(--color-espresso);
+        font-family: var(--font-sans);
+        font-size: var(--text-lm-body);
+        line-height: var(--text-lm-body--line-height);
+    }
+
+    .lm-site.lm-admin {
+        position: relative;
+        isolation: isolate;
+        min-height: 100vh;
+        overflow-x: clip;
+        background: #140F0D;
+        color: #FAF6F0;
+    }
+
+    .lm-container {
+        width: 100%;
+        max-width: var(--container-lm-page);
+        margin-inline: auto;
+        padding-inline: var(--lm-gutter);
+    }
+
+    .lm-section { padding-block: var(--spacing-lm-section); }
+    .lm-section--compact { padding-block: var(--lm-space-xl); }
+    .lm-stack { display: flex; flex-direction: column; gap: var(--lm-space-md); }
+    .lm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lm-space-xs); }
+
+    .lm-display, .lm-h1, .lm-h2 {
+        font-family: var(--font-display);
+        font-weight: 400;
+        text-wrap: balance;
+        overflow-wrap: break-word;
+    }
+
+    .lm-display { font-size: var(--text-lm-display); line-height: var(--text-lm-display--line-height); }
+    .lm-h1 { font-size: var(--text-lm-h1); line-height: var(--text-lm-h1--line-height); }
+    .lm-h2 { font-size: var(--text-lm-h2); line-height: var(--text-lm-h2--line-height); }
+
+    .lm-h3, .lm-body, .lm-meta, .lm-eyebrow, .lm-label {
+        font-family: var(--font-sans);
+    }
+
+    .lm-h3 { font-size: var(--text-lm-h3); line-height: var(--text-lm-h3--line-height); font-weight: 600; }
+    .lm-body { font-size: var(--text-lm-body); line-height: var(--text-lm-body--line-height); }
+    .lm-meta { font-size: var(--text-lm-meta); line-height: var(--text-lm-meta--line-height); }
+    .lm-eyebrow, .lm-label {
+        font-size: var(--text-lm-label);
+        line-height: var(--text-lm-label--line-height);
+        font-weight: 600;
+        letter-spacing: var(--tracking-lm-label);
+        text-transform: uppercase;
+    }
+
+    /* Mineral on Bone is 4.38:1; use Charcoal for small secondary text on Bone. */
+    .lm-muted { color: var(--color-charcoal); }
+    .lm-divider { border: 0; border-block-start: var(--lm-border) solid var(--color-line); }
+    .lm-border { border: var(--lm-border) solid var(--color-line); border-radius: var(--radius-lm); }
+
+    .lm-contact-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--lm-space-lg);
+    }
+    .lm-contact-card {
+        min-width: 0;
+        padding: clamp(1.25rem, 3vw, 2rem);
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius-lm);
+        background: var(--color-ivory);
+        color: var(--color-espresso);
+    }
+    .lm-contact-details,
+    .lm-contact-hours__list {
+        display: grid;
+        gap: var(--lm-space-sm);
+        margin-top: var(--lm-space-md);
+    }
+    .lm-contact-details > div,
+    .lm-contact-hours__list > div {
+        display: grid;
+        gap: var(--lm-space-xs);
+        min-width: 0;
+        padding-block: var(--lm-space-sm);
+        border-block-end: 1px solid var(--color-line);
+    }
+    .lm-contact-details dt,
+    .lm-contact-hours__list dt {
+        color: var(--color-earth);
+        font-size: var(--text-lm-label);
+        font-weight: 700;
+        letter-spacing: var(--tracking-lm-label);
+        text-transform: uppercase;
+    }
+    .lm-contact-details dd,
+    .lm-contact-details address,
+    .lm-contact-hours__list dd {
+        color: var(--color-espresso);
+        font-size: 1.0625rem;
+        font-style: normal;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+        opacity: 1;
+        visibility: visible;
+    }
+    .lm-contact-details a { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; }
+    .lm-contact-hours { margin-top: var(--lm-space-lg); }
+    .lm-contact-hours__list > div { grid-template-columns: minmax(6rem, 1fr) minmax(0, 1.5fr); }
+    .lm-contact-map { display: grid; gap: var(--lm-space-md); }
+    @media (min-width: 768px) {
+        .lm-contact-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* Pair with native disabled; aria-disabled alone never prevents link activation. */
+    .lm-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--lm-space-xs);
+        min-height: var(--lm-touch);
+        min-width: var(--lm-touch);
+        padding: 0.625rem var(--lm-space-md);
+        border: var(--lm-border) solid var(--color-espresso);
+        border-radius: var(--radius-lm);
+        background: var(--color-espresso);
+        color: var(--color-ivory);
+        font-family: var(--font-sans);
+        font-size: var(--text-lm-meta);
+        line-height: var(--text-lm-meta--line-height);
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color var(--lm-duration) var(--lm-ease),
+            border-color var(--lm-duration) var(--lm-ease), color var(--lm-duration) var(--lm-ease),
+            transform var(--lm-duration) var(--lm-ease);
+    }
+
+    .lm-button--secondary { background: transparent; color: var(--color-espresso); }
+    .lm-button--quiet {
+        padding-inline: var(--lm-space-xs);
+        border-color: transparent;
+        background: transparent;
+        color: var(--color-earth);
+        text-decoration: underline;
+        text-underline-offset: 0.25em;
+    }
+    .lm-button--danger { background: var(--color-danger); border-color: var(--color-danger); }
+
+    @media (hover: hover) {
+        .lm-button:hover:not(:disabled, [aria-disabled="true"]) {
+            background: var(--color-charcoal);
+            border-color: var(--color-charcoal);
+            color: var(--color-ivory);
+        }
+        .lm-button--secondary:hover:not(:disabled, [aria-disabled="true"]) { background: var(--color-espresso); }
+        .lm-button--quiet:hover:not(:disabled, [aria-disabled="true"]) {
+            background: transparent;
+            border-color: transparent;
+            color: var(--color-espresso);
+            text-decoration-thickness: 2px;
+        }
+    }
+
+    .lm-button:active:not(:disabled, [aria-disabled="true"]) {
+        transform: translateY(1px);
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 0.25em;
+    }
+    .lm-button:is(:disabled, [aria-disabled="true"]) {
+        background: var(--color-bone);
+        color: var(--color-charcoal);
+        border-color: var(--color-mineral);
+        border-style: dashed;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Keep label/for, describedby, required, and native input types in consuming views. */
+    .lm-field { display: grid; gap: var(--lm-space-xs); min-width: 0; }
+    .lm-label { display: block; color: var(--color-espresso); }
+    .lm-control {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        min-height: var(--lm-touch);
+        padding: 0.625rem var(--lm-space-sm);
+        border: var(--lm-border) solid var(--color-mineral);
+        border-radius: var(--radius-lm);
+        background: var(--color-ivory);
+        color: var(--color-espresso);
+        font-family: var(--font-sans);
+        font-size: var(--text-lm-body);
+        line-height: var(--text-lm-body--line-height);
+        transition: border-color var(--lm-duration) var(--lm-ease);
+    }
+    .lm-control::placeholder { color: var(--color-mineral); opacity: 1; }
+    textarea.lm-control { min-height: 8rem; resize: vertical; }
+    select.lm-control { appearance: auto; }
+    .lm-control[aria-invalid="true"] { border-color: var(--color-danger); border-width: 2px; }
+    .lm-error { color: var(--color-danger); font-size: var(--text-lm-meta); line-height: var(--text-lm-meta--line-height); }
+    .lm-error, .lm-alert { overflow-wrap: anywhere; }
+    .lm-control:disabled {
+        background: var(--color-bone);
+        color: var(--color-charcoal);
+        border-style: dashed;
+        cursor: not-allowed;
+        opacity: 1;
+    }
+    .lm-choice {
+        display: flex;
+        align-items: center;
+        gap: var(--lm-space-xs);
+        min-height: var(--lm-touch);
+        font-family: var(--font-sans);
+        font-size: var(--text-lm-body);
+        color: var(--color-espresso);
+        cursor: pointer;
+    }
+    .lm-check, .lm-radio {
+        appearance: auto;
+        width: 1.125rem;
+        height: 1.125rem;
+        flex-shrink: 0;
+        accent-color: var(--color-espresso);
+    }
+    .lm-choice:has(:disabled), .lm-check:disabled, .lm-radio:disabled { cursor: not-allowed; }
+    .lm-choice:has(:disabled) { text-decoration: line-through; text-decoration-color: var(--color-mineral); }
+    .lm-check[aria-invalid="true"], .lm-radio[aria-invalid="true"] { outline: 2px solid var(--color-danger); outline-offset: 2px; }
+
+    /* Always supply visible state text; views choose role=status or role=alert as appropriate. */
+    .lm-status, .lm-alert {
+        --lm-state-color: var(--color-charcoal);
+        color: var(--lm-state-color);
+        font-family: var(--font-sans);
+        font-size: var(--text-lm-meta);
+        line-height: var(--text-lm-meta--line-height);
+        border-inline-start: 2px solid var(--lm-state-color);
+    }
+    .lm-status { display: inline-flex; padding-inline-start: var(--lm-space-xs); font-weight: 600; }
+    .lm-alert { padding: var(--lm-space-sm); background: var(--color-ivory); }
+    .lm-allergen-caution {
+        border: var(--lm-border) solid var(--color-line);
+        border-inline-start: 3px solid var(--color-earth);
+        background: var(--color-ivory);
+        color: var(--color-charcoal);
+    }
+    :is(.lm-status, .lm-alert)[data-state="success"] { --lm-state-color: var(--color-espresso); }
+    :is(.lm-status, .lm-alert)[data-state="pending"] { --lm-state-color: var(--color-earth); border-inline-start-style: dotted; }
+    :is(.lm-status, .lm-alert):is([data-state="failed"], [data-state="error"]) { --lm-state-color: var(--color-danger); }
+    :is(.lm-status, .lm-alert)[data-state="unavailable"] { border-inline-start-style: dashed; }
+    :is(.lm-status, .lm-alert)[data-state="info"] { --lm-state-color: var(--color-charcoal); }
+
+    .lm-allergen-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--lm-space-sm);
+    }
+    .lm-allergen-option {
+        display: flex;
+        min-width: 0;
+        min-height: var(--lm-touch);
+        align-items: center;
+        gap: var(--lm-space-sm);
+        border: var(--lm-border) solid var(--color-line);
+        border-radius: var(--radius-lm);
+        background: var(--color-ivory);
+        color: var(--color-espresso);
+        padding: var(--lm-space-sm);
+        cursor: pointer;
+        transition: border-color var(--lm-duration) var(--lm-ease),
+            background-color var(--lm-duration) var(--lm-ease);
+    }
+    .lm-allergen-option:has(:checked) {
+        border-color: var(--color-earth);
+        background: var(--color-bone);
+    }
+    .lm-allergen-option:focus-within {
+        outline: 2px solid var(--color-espresso);
+        outline-offset: 2px;
+    }
+    .lm-allergen-evidence-list {
+        display: grid;
+        gap: var(--lm-space-xs);
+        list-style: none;
+        padding: 0;
+    }
+    .lm-allergen-evidence {
+        display: flex;
+        width: fit-content;
+        max-width: 100%;
+        min-height: var(--lm-touch);
+        align-items: center;
+        border: var(--lm-border) solid var(--color-line);
+        border-radius: var(--radius-lm);
+        background: var(--color-ivory);
+        color: var(--color-charcoal);
+        padding: var(--lm-space-xs) var(--lm-space-sm);
+        overflow-wrap: anywhere;
+    }
+    .lm-featured-heading { width: 100%; text-align: center; }
+    @media (min-width: 40rem) {
+        .lm-allergen-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* Render an img only for an available source; omit the wrapper when possible.
+       Alt text, width/height, and loading=eager (hero) or lazy (below fold) belong on the img. */
+    .lm-media { display: block; overflow: hidden; aspect-ratio: var(--lm-media-ratio, 4 / 3); }
+    .lm-media:not(:has(img[src]:not([src=""]))) { display: none; }
+    .lm-media img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform var(--lm-duration) var(--lm-ease);
+    }
+    @media (hover: hover) {
+        a.lm-media:hover img { transform: scale(1.02); }
+    }
+
+    .lm-welcome {
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: calc(90svh - 5rem - 1px);
+        overflow: hidden;
+        background: var(--color-espresso);
+        color: var(--color-ivory);
+    }
+    .lm-welcome::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background: rgb(33 27 23 / 60%);
+        pointer-events: none;
+    }
+    .lm-welcome__content { position: relative; z-index: 2; padding-block: clamp(4rem, 10svh, 8rem); }
+    .lm-welcome__copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 1.75rem;
+        max-width: 44rem;
+    }
+    .lm-welcome__photograph {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        margin: 0;
+    }
+    .lm-welcome__photograph img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 55% 60%;
+    }
+    .lm-welcome .lm-button {
+        background: var(--color-ivory);
+        border-color: var(--color-ivory);
+        color: var(--color-espresso);
+    }
+    .lm-welcome .lm-button--secondary { background: transparent; color: var(--color-ivory); }
+    @media (hover: hover) {
+        .lm-welcome .lm-button:hover:not(:disabled, [aria-disabled="true"]) {
+            background: var(--color-bone);
+            border-color: var(--color-bone);
+            color: var(--color-espresso);
+        }
+    }
+    @media (min-width: 768px) {
+        .lm-welcome { min-height: calc(100svh - 5rem - 1px); }
+        .lm-welcome__copy { gap: 2rem; }
+        .lm-welcome__photograph img { object-position: 50% 60%; }
+    }
+
+    .lm-featured-dish {
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        align-items: flex-end;
+        width: 100%;
+        min-height: max(28rem, 68svh);
+        overflow: hidden;
+        background: var(--color-espresso);
+        color: var(--color-ivory);
+    }
+    .lm-featured-dish--right { background: var(--color-charcoal); }
+    .lm-featured-dish__photograph {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        margin: 0;
+    }
+    .lm-featured-dish__photograph img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+    }
+    .lm-featured-dish--photographic::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background: rgb(33 27 23 / 60%);
+        pointer-events: none;
+    }
+    .lm-featured-dish__content {
+        position: relative;
+        z-index: 2;
+        padding-block: clamp(3rem, 7svh, 6rem);
+    }
+    .lm-featured-dish__copy { max-width: 38rem; overflow-wrap: anywhere; }
+    .lm-featured-dish .lm-button--quiet { color: var(--color-ivory); }
+    @media (hover: hover) {
+        .lm-featured-dish .lm-button--quiet:hover:not(:disabled, [aria-disabled="true"]) {
+            color: var(--color-bone);
+        }
+    }
+    @media (min-width: 768px) {
+        .lm-featured-dish { min-height: max(32rem, 75svh); }
+        .lm-featured-dish--right { align-items: center; }
+        .lm-featured-dish--right .lm-featured-dish__copy { margin-left: auto; }
+    }
+    @media (min-width: 1024px) {
+        .lm-featured-dish { min-height: max(32rem, 80svh); }
+    }
+
+    .lm-floor-table {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-width: 0;
+        cursor: pointer;
+    }
+    .lm-floor-grid { grid-auto-rows: 200px; }
+    .lm-floor-grid [data-row="1"] { grid-row: 1; }
+    .lm-floor-grid [data-row="2"] { grid-row: 2; }
+    .lm-floor-grid [data-row="3"] { grid-row: 3; }
+    .lm-floor-grid [data-row="4"] { grid-row: 4; }
+    .lm-floor-grid [data-row="5"] { grid-row: 5; }
+    .lm-floor-grid [data-row="6"] { grid-row: 6; }
+    .lm-floor-grid [data-row="7"] { grid-row: 7; }
+    .lm-floor-grid [data-row="8"] { grid-row: 8; }
+    .lm-floor-grid [data-row="9"] { grid-row: 9; }
+    .lm-floor-grid [data-row="10"] { grid-row: 10; }
+    .lm-floor-grid [data-row="11"] { grid-row: 11; }
+    .lm-floor-grid [data-row="12"] { grid-row: 12; }
+    .lm-floor-grid [data-row="13"] { grid-row: 13; }
+    .lm-floor-grid [data-row="14"] { grid-row: 14; }
+    .lm-floor-grid [data-row="15"] { grid-row: 15; }
+    .lm-floor-grid [data-row="16"] { grid-row: 16; }
+    .lm-floor-grid [data-row="17"] { grid-row: 17; }
+    .lm-floor-grid [data-row="18"] { grid-row: 18; }
+    .lm-floor-grid [data-row="19"] { grid-row: 19; }
+    .lm-floor-grid [data-row="20"] { grid-row: 20; }
+    .lm-floor-grid [data-column="1"] { grid-column: 1; }
+    .lm-floor-grid [data-column="2"] { grid-column: 2; }
+    .lm-floor-grid [data-column="3"] { grid-column: 3; }
+    .lm-floor-grid [data-column="4"] { grid-column: 4; }
+    .lm-floor-table[data-capacity="2"] .lm-floor-table__drawing { width: 64px; }
+    .lm-floor-table[data-capacity="3"] .lm-floor-table__drawing,
+    .lm-floor-table[data-capacity="4"] .lm-floor-table__drawing { width: 80px; }
+    .lm-floor-table[data-capacity="6"] .lm-floor-table__drawing { width: 112px; }
+    .lm-floor-table[data-capacity="8"] .lm-floor-table__drawing { width: 128px; }
+    .lm-floor-table[data-capacity="10"] .lm-floor-table__drawing { width: 144px; }
+    .lm-floor-table__drawing {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+    .lm-floor-table__top {
+        display: grid;
+        place-items: center;
+        width: 100%;
+        height: 68px;
+        border: 2px solid var(--color-mineral);
+        border-radius: 3px;
+        background: var(--color-ivory);
+        color: var(--color-espresso);
+        font-weight: 600;
+    }
+    .lm-floor-table__chairs { display: flex; justify-content: space-around; width: 100%; }
+    .lm-floor-table__chair {
+        display: block;
+        width: 18px;
+        height: 16px;
+        border: 1px solid var(--color-mineral);
+        background: var(--color-bone);
+    }
+    .lm-floor-table__chairs--top .lm-floor-table__chair { border-top-width: 4px; border-radius: 4px 4px 1px 1px; }
+    .lm-floor-table__chairs--bottom .lm-floor-table__chair { border-bottom-width: 4px; border-radius: 1px 1px 4px 4px; }
+    .lm-floor-table__selected { visibility: hidden; color: var(--color-earth); font-weight: 600; }
+    .lm-floor-table:has(input:checked) .lm-floor-table__top { border-color: var(--color-earth); background: var(--color-earth); color: var(--color-ivory); }
+    .lm-floor-table:has(input:checked) .lm-floor-table__chair { border-color: var(--color-earth); }
+    .lm-floor-table:has(input:checked) .lm-floor-table__selected { visibility: visible; }
+    .lm-floor-table:has(input:focus-visible) .lm-floor-table__drawing { outline: 2px solid var(--color-espresso); outline-offset: 6px; }
+
+    .lm-empty { padding-block: var(--lm-space-xl); border-block: var(--lm-border) solid var(--color-line); }
+    .lm-loading { display: flex; align-items: center; gap: var(--lm-space-xs); color: var(--color-charcoal); }
+    .lm-loading[aria-busy="true"] { cursor: progress; }
+}
+
+/* Two-tone focus remains distinguishable on both light and dark surfaces. */
+@layer base {
+    :where(.lm-site, [class^="lm-"], [class*=" lm-"])::selection,
+    .lm-site ::selection { background: var(--color-espresso); color: var(--color-ivory); }
+
+    :where(.lm-site :focus-visible, [class^="lm-"]:focus-visible, [class*=" lm-"]:focus-visible) {
+        outline: 2px solid var(--color-espresso);
+        outline-offset: 3px;
+        box-shadow: 0 0 0 3px var(--color-ivory);
+    }
+}
+
+/* Customer-wide opt-in; important also overrides future motion utility classes. */
+@media (prefers-reduced-motion: reduce) {
+    :where(.lm-site, .lm-site *, [class^="lm-"], [class*=" lm-"]),
+    :where(.lm-site, .lm-site *, [class^="lm-"], [class*=" lm-"])::before,
+    :where(.lm-site, .lm-site *, [class^="lm-"], [class*=" lm-"])::after,
+    .lm-media img {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+        transform: none !important;
+    }
+}
+
+/* Customer-only warm shader theme. Admin pages retain their operational palette. */
+.lm-site.lm-customer.lm-culinary-shader-theme {
+    --color-espresso: #FAF6F0;
+    --color-charcoal: #D5CBBF;
+    --color-bone: #16110E;
+    --color-ivory: rgba(30, 22, 18, 0.72);
+    --color-mineral: #D5CBBF;
+    --color-line: rgba(216, 180, 148, 0.22);
+    --color-earth: #E7A26E;
+    --color-danger: #FF9E91;
+    --color-brand-50: rgba(30, 22, 18, 0.72);
+    --color-brand-100: rgba(216, 180, 148, 0.22);
+    --color-brand-200: rgba(216, 180, 148, 0.38);
+    --color-brand-300: #5C3020;
+    --color-brand-400: #975B3E;
+    --color-brand-500: #C87D4B;
+    --color-brand-600: #C87D4B;
+    --color-brand-700: #E7A26E;
+    --color-brand-800: #FAF6F0;
+    --color-brand-900: #FAF6F0;
+    --color-brand-950: #16110E;
+    --color-primary: #E7A26E;
+    --color-primary-dark: #C87D4B;
+    --color-accent: #C87D4B;
+    --color-accent-light: #E7A26E;
+    --color-surface: #16110E;
+    --color-surface-dark: rgba(30, 22, 18, 0.88);
+    --color-text: #FAF6F0;
+    --color-text-muted: #D5CBBF;
+
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    overflow-x: clip;
+    background-color: #16110E;
+    background-image:
+        radial-gradient(ellipse at 14% 18%, rgba(151, 91, 62, 0.28), transparent 42%),
+        radial-gradient(ellipse at 86% 24%, rgba(200, 125, 75, 0.2), transparent 38%),
+        radial-gradient(ellipse at 52% 88%, rgba(92, 48, 32, 0.3), transparent 48%),
+        linear-gradient(135deg, #16110E, #20140F 52%, #16110E);
+    background-attachment: fixed;
+    color: #FAF6F0;
+}
+
+.lm-shader-grain {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+}
+.lm-shader-grain {
+    z-index: -1;
+    opacity: 0.05;
+    background-image: repeating-radial-gradient(circle at 17% 29%, rgb(250 246 240 / 35%) 0 0.45px, transparent 0.7px 2.6px);
+    background-size: 5px 5px;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :where([class~="bg-white"], [class~="bg-ivory"], [class~="bg-bone"], [class~="bg-brand-50"]) {
+    border-color: rgba(216, 180, 148, 0.22);
+    border-radius: 4px;
+    background-color: rgba(30, 22, 18, 0.72) !important;
+    color: #FAF6F0;
+    backdrop-filter: blur(18px);
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :where([class~="rounded-xl"], [class~="rounded-2xl"], [class~="rounded-3xl"], [class~="rounded-full"]) {
+    border-radius: 4px !important;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :where([class~="text-ivory"], [class~="text-white"], [class~="text-brand-800"], [class~="text-brand-900"], [class~="text-primary"], [class~="text-text"]) {
+    color: #FAF6F0 !important;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :where([class~="text-mineral"], [class~="text-text-muted"], [class~="text-charcoal"], [class~="text-brand-700"]) {
+    color: #D5CBBF !important;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :where([class~="border-line"], [class~="border-brand-100"], [class~="border-brand-200"]) {
+    border-color: rgba(216, 180, 148, 0.22) !important;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :where([class~="bg-red-50"], [class~="bg-green-50"], [class~="bg-emerald-50"], [class~="bg-brand-50"]) {
+    background-color: rgba(30, 22, 18, 0.84) !important;
+    color: #FAF6F0;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :where([class~="text-red-600"], [class~="text-red-700"], [class~="text-red-800"], [class~="text-green-800"], [class~="text-emerald-800"]) {
+    color: #FFB2A8 !important;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme [data-customer-nav],
+.lm-site.lm-customer.lm-culinary-shader-theme > footer,
+.lm-site.lm-customer.lm-culinary-shader-theme main > section[aria-labelledby]:not(.lm-welcome) {
+    border-color: rgba(216, 180, 148, 0.22);
+    background-color: rgba(30, 22, 18, 0.72);
+    backdrop-filter: blur(18px);
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-contact-card {
+    border-color: rgba(216, 180, 148, 0.35);
+    background: rgba(30, 22, 18, 0.9);
+    color: #FCFAF6;
+    backdrop-filter: blur(18px);
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-contact-card :is(dt, .lm-label) {
+    color: #E7A26E;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-contact-card :is(dd, address) {
+    color: #FCFAF6;
+    font-size: 1.0625rem;
+    font-style: normal;
+    line-height: 1.6;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-contact-details a {
+    color: #FCFAF6;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme main > section[aria-labelledby]:not(.lm-welcome) {
+    border-block: 1px solid rgba(216, 180, 148, 0.22);
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme article.lm-divider {
+    margin-block: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(216, 180, 148, 0.22);
+    border-radius: 4px;
+    background: rgba(30, 22, 18, 0.72);
+    backdrop-filter: blur(18px);
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme main :is(
+    form#rasa-ai-form,
+    form#availability-form,
+    form#reservation-form,
+    form[role="search"],
+    form[action*="checkout"],
+    form[action*="contact"],
+    form[action*="cart"]
+) {
+    border: 1px solid rgba(216, 180, 148, 0.22);
+    border-radius: 4px;
+    background: rgba(30, 22, 18, 0.72);
+    padding: clamp(1rem, 3vw, 1.5rem);
+    backdrop-filter: blur(18px);
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :is(.lm-control, .lm-allergen-option, .lm-allergen-evidence, .lm-alert, .lm-allergen-caution) {
+    border-color: rgba(216, 180, 148, 0.38);
+    background-color: rgba(30, 22, 18, 0.84);
+    color: #FAF6F0;
+    backdrop-filter: blur(18px);
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-control {
+    color-scheme: dark;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-control::placeholder {
+    color: #D5CBBF;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-control:focus-visible,
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-button:focus-visible {
+    outline-color: #E7A26E;
+    box-shadow: 0 0 0 3px #16110E;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-button:not(.lm-button--quiet) {
+    border-color: #E7A26E;
+    background-color: #E7A26E;
+    color: #16110E;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-button--secondary {
+    border-color: rgba(216, 180, 148, 0.55);
+    background-color: rgba(30, 22, 18, 0.72);
+    color: #FAF6F0;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-button--quiet {
+    color: #E7A26E;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-status,
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-alert {
+    --lm-state-color: #D5CBBF;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :is(.lm-status, .lm-alert)[data-state="success"],
+.lm-site.lm-customer.lm-culinary-shader-theme :is(.lm-status, .lm-alert)[data-state="pending"] {
+    --lm-state-color: #E7A26E;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme :is(.lm-status, .lm-alert)[data-state="failed"],
+.lm-site.lm-customer.lm-culinary-shader-theme :is(.lm-status, .lm-alert)[data-state="error"] {
+    --lm-state-color: #FF9E91;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-welcome,
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-featured-dish {
+    color: #FAF6F0;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-welcome .lm-button:not(.lm-button--quiet),
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-featured-dish .lm-button:not(.lm-button--quiet) {
+    border-color: #FAF6F0;
+    background-color: #FAF6F0;
+    color: #16110E;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-floor-table__top {
+    border-color: rgba(216, 180, 148, 0.55);
+    background: rgba(30, 22, 18, 0.84);
+    color: #FAF6F0;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-floor-table:has(input:checked) .lm-floor-table__top {
+    border-color: #E7A26E;
+    background: #C87D4B;
+    color: #16110E;
+}
+
+.lm-site.lm-customer.lm-culinary-shader-theme .lm-floor-table:has(input:focus-visible) .lm-floor-table__drawing {
+    outline-color: #E7A26E;
+}
+
+/* Keep operational surfaces translucent while retaining contrast over the animated field. */
+.lm-site.lm-admin {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    overflow-x: clip;
+    background: #140F0D;
+    color: #FAF6F0;
+}
+
+.lm-site.lm-admin :where([class~="bg-white"], [class~="bg-ivory"], [class~="bg-bone"], [class~="bg-brand-50"]) {
+    border-color: rgba(216, 180, 148, 0.25) !important;
+    background-color: rgba(38, 27, 22, 0.78) !important;
+    color: #FAF6F0;
+    backdrop-filter: blur(18px);
+}
+
+.lm-site.lm-admin :where([class~="text-espresso"], [class~="text-text"], [class~="text-brand-800"], [class~="text-brand-900"], [class~="text-charcoal"]) {
+    color: #FAF6F0 !important;
+}
+
+.lm-site.lm-admin :where([class~="text-mineral"], [class~="text-text-muted"], [class~="text-brand-700"]) {
+    color: #D5CBBF !important;
+}
+
+.lm-site.lm-admin :where([class~="text-primary"]) {
+    color: #E7A26E !important;
+}
+
+.lm-site.lm-admin :where([class~="border-line"], [class~="border-brand-100"], [class~="border-brand-200"]) {
+    border-color: rgba(216, 180, 148, 0.25) !important;
+}
+
+.lm-site.lm-admin :is(input:not([type="hidden"]):not([type="checkbox"]), select, textarea) {
+    border-color: rgba(216, 180, 148, 0.5);
+    background-color: rgba(20, 15, 13, 0.88) !important;
+    color: #FAF6F0 !important;
+    color-scheme: dark;
+}
+
+.lm-site.lm-admin :is(input, select, textarea, button, a):focus-visible {
+    outline: 3px solid #E7A26E !important;
+    outline-offset: 2px;
+}
+
+.lm-site.lm-admin table {
+    color: #FAF6F0;
+}
+
+.lm-site.lm-admin table thead {
+    background-color: rgba(184, 93, 59, 0.2) !important;
+    color: #FAF6F0 !important;
+}
+
+.lm-site.lm-admin table thead th {
+    border-bottom: 1px solid rgba(216, 180, 148, 0.38);
+}
+
+.lm-site.lm-admin table tbody tr:hover {
+    background-color: rgba(224, 145, 69, 0.12) !important;
+}
+
+.lm-site.lm-admin :is(.bg-green-50, .bg-emerald-50) {
+    border: 1px solid rgba(113, 190, 139, 0.42);
+    background-color: rgba(35, 94, 59, 0.5) !important;
+    color: #D2F3DA !important;
+}
+
+.lm-site.lm-admin :is(.bg-red-50, .bg-rose-50) {
+    border: 1px solid rgba(255, 158, 145, 0.45);
+    background-color: rgba(143, 52, 36, 0.55) !important;
+    color: #FFE0DA !important;
+}
+
+.lm-site.lm-admin :is(.bg-yellow-50, .bg-amber-50) {
+    border: 1px solid rgba(240, 190, 102, 0.45);
+    background-color: rgba(130, 88, 29, 0.5) !important;
+    color: #FFE8B5 !important;
+}
+
+.lm-site.lm-admin .bg-brand-100 {
+    background-color: rgba(184, 93, 59, 0.24) !important;
+    color: #FAF6F0 !important;
+}
+
+.lm-site.lm-admin :is(.text-green-800, .text-emerald-800) { color: #D2F3DA !important; }
+.lm-site.lm-admin :is(.text-red-600, .text-red-700, .text-red-800) { color: #FFE0DA !important; }
+.lm-site.lm-admin :is(.text-yellow-800, .text-amber-800) { color: #FFE8B5 !important; }

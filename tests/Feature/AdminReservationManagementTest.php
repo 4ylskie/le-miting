@@ -4,6 +4,7 @@ use App\Models\Reservation;
 use App\Models\Table;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
@@ -43,16 +44,48 @@ test('an administrator can view reservation details', function () {
 });
 
 test('an administrator can confirm a pending reservation', function () {
+    Mail::fake();
     $admin = User::factory()->create(['role' => 'admin']);
-    $table = Table::factory()->create(['status' => 'available']);
+    $table = Table::factory()->create(['status' => 'available', 'capacity' => 4]);
     $reservation = reservationAt($table);
 
     $this->actingAs($admin)
-        ->patch(route('admin.reservations.update-status', $reservation), ['status' => 'confirmed'])
+        ->patch(route('admin.reservations.update-status', $reservation), ['status' => 'confirmed', 'expected_status' => $reservation->status])
         ->assertRedirect();
 
     expect($reservation->refresh()->status)->toBe('confirmed');
 });
+
+test('an administrator can look up and check in a confirmed reservation by reservation number', function () {
+    $this->travelTo('2026-10-09 03:00:00');
+    Mail::fake();
+    $admin = User::factory()->create(['role' => 'admin']);
+    $table = Table::factory()->create(['status' => 'available', 'capacity' => 4]);
+    $reservation = Reservation::factory()->confirmed()->create([
+        'table_id' => $table->id, 'guest_count' => 2,
+        'reservation_date' => '2026-10-09', 'reservation_time' => '11:00',
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.reservations.check-in'), ['reservation_number' => $reservation->reservation_number])
+        ->assertRedirect(route('admin.reservations.show', $reservation));
+
+    expect($reservation->refresh()->status)->toBe('confirmed');
+    expect($reservation->checked_in_at->equalTo(now()))->toBeTrue();
+    Mail::assertNothingSent();
+});
+
+test('an administrator cannot check in a reservation outside the confirmed state', function (string $status) {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $table = Table::factory()->create(['status' => 'available']);
+    $reservation = reservationAt($table, status: $status);
+
+    $this->actingAs($admin)
+        ->post(route('admin.reservations.check-in'), ['reservation_number' => $reservation->reservation_number])
+        ->assertSessionHasErrors('reservation_number');
+
+    expect($reservation->refresh()->status)->toBe($status);
+})->with(['pending', 'cancelled', 'completed']);
 
 test('an invalid reservation status transition is rejected', function () {
     $admin = User::factory()->create(['role' => 'admin']);
@@ -60,7 +93,7 @@ test('an invalid reservation status transition is rejected', function () {
     $reservation = reservationAt($table);
 
     $this->actingAs($admin)
-        ->patch(route('admin.reservations.update-status', $reservation), ['status' => 'completed'])
+        ->patch(route('admin.reservations.update-status', $reservation), ['status' => 'completed', 'expected_status' => $reservation->status])
         ->assertRedirect()
         ->assertSessionHas('error');
 
@@ -73,9 +106,10 @@ test('an administrator can reassign an active reservation to an available table'
     $target = Table::factory()->create(['status' => 'available', 'capacity' => 6]);
 
     $reservation = reservationAt($current);
+    $reservation->update(['guest_count' => 3]);
 
     $this->actingAs($admin)
-        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $target->id])
+        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $target->id, 'expected_table_id' => $reservation->table_id, 'expected_status' => $reservation->status])
         ->assertRedirect()
         ->assertSessionHas('status');
 
@@ -95,7 +129,7 @@ test('a reservation cannot be reassigned to a table that is too small', function
     ]);
 
     $this->actingAs($admin)
-        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $small->id])
+        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $small->id, 'expected_table_id' => $reservation->table_id, 'expected_status' => $reservation->status])
         ->assertSessionHasErrors('table_id');
 
     expect($reservation->refresh()->table_id)->toBe($current->id);
@@ -110,7 +144,7 @@ test('a reservation cannot be reassigned to a table already reserved at that tim
     $reservation = reservationAt($current, '19:00');
 
     $this->actingAs($admin)
-        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $occupied->id])
+        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $occupied->id, 'expected_table_id' => $reservation->table_id, 'expected_status' => $reservation->status])
         ->assertSessionHasErrors('table_id')
         ->assertSessionHasErrors(['table_id' => 'That table is already reserved for this time. Choose another table.']);
 
@@ -123,7 +157,7 @@ test('reassigning a reservation to its current table is a no-op', function () {
     $reservation = reservationAt($table);
 
     $this->actingAs($admin)
-        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $table->id])
+        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $table->id, 'expected_table_id' => $reservation->table_id, 'expected_status' => $reservation->status])
         ->assertRedirect()
         ->assertSessionHas('status');
 
@@ -137,7 +171,7 @@ test('completed reservations cannot be reassigned', function () {
     $reservation = reservationAt($current, '19:00', 'completed');
 
     $this->actingAs($admin)
-        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $target->id])
+        ->patch(route('admin.reservations.update-table', $reservation), ['table_id' => $target->id, 'expected_table_id' => $reservation->table_id, 'expected_status' => $reservation->status])
         ->assertRedirect()
         ->assertSessionHas('error');
 

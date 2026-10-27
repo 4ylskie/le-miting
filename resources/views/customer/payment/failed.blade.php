@@ -1,28 +1,44 @@
 @extends('layouts.master')
 
-@section('title', 'Payment Failed — Le Miting')
+@section('title', $payment?->status === 'paid' ? 'Payment Already Verified — Le Miting' : 'Payment Not Completed — Le Miting')
 
 @section('content')
-    <section class="py-20" aria-label="Payment failed">
-        <div class="mx-auto max-w-xl px-4 sm:px-6 lg:px-8 text-center">
-            <span class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-3xl" aria-hidden="true">✕</span>
-            <h1 class="mt-6 text-2xl font-bold text-brand-800">Payment could not be processed.</h1>
-            <p class="mt-3 text-text-muted">
-                Please try again or return to checkout. No payment was deducted.
+    <section class="lm-container lm-section" aria-labelledby="payment-heading">
+        <div class="lm-stack max-w-2xl">
+            <p class="lm-status self-start" data-state="{{ $payment?->status === 'paid' ? 'success' : 'failed' }}">{{ $payment?->status === 'paid' ? 'Paid' : 'Payment not completed' }}</p>
+            <h1 id="payment-heading" class="lm-h1">{{ $payment?->status === 'paid' ? 'Payment already verified' : 'Payment not completed' }}</h1>
+            <p class="lm-body lm-muted">
+                @if ($payment?->status === 'paid')
+                    This payment is already recorded as paid. Use the confirmation link from your email to view your record.
+                @elseif ($canRetry)
+                    You can retry payment for the same pending transaction.
+                @elseif ($payment?->reservation_id !== null)
+                    This reservation payment cannot be retried. Return to reservation options to check availability again.
+                @else
+                    Payment has not been confirmed. You can return to your cart or browse the menu.
+                @endif
             </p>
-            <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-                <a
-                    href="{{ route('cart.index') }}"
-                    class="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                >
-                    Try Again
-                </a>
-                <a
-                    href="{{ route('menu.index') }}"
-                    class="inline-flex items-center justify-center rounded-md border border-brand-200 bg-white px-6 py-3 text-base font-semibold text-brand-700 hover:bg-brand-50 focus:outline-none focus:ring-2 focus:ring-brand-300"
-                >
-                    Browse Menu
-                </a>
+            @if ($errors->any())
+                <div class="lm-alert" data-state="error" role="alert">
+                    @foreach ($errors->all() as $message)
+                        <p>{{ $message }}</p>
+                    @endforeach
+                </div>
+            @endif
+            <div class="lm-actions lm-divider pt-(--lm-space-lg)">
+                @if ($payment?->status === 'paid')
+                    <a href="{{ route('home') }}" class="lm-button">Back to Home</a>
+                @elseif ($canRetry)
+                    <form method="POST" action="{{ route('payment.retry', $payment) }}">
+                        @csrf
+                        <button type="submit" class="lm-button">Retry Payment</button>
+                    </form>
+                @elseif ($payment?->reservation_id !== null)
+                    <a href="{{ route('reservation.create') }}" class="lm-button">Reservation options</a>
+                @else
+                    <a href="{{ route('cart.index') }}" class="lm-button">Return to Cart</a>
+                @endif
+                <a href="{{ route('menu.index') }}" class="lm-button lm-button--quiet">Browse Menu</a>
             </div>
         </div>
     </section>

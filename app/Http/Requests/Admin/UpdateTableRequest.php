@@ -16,8 +16,10 @@ class UpdateTableRequest extends FormRequest
     {
         return [
             'table_number' => ['required', 'string', 'max:20', Rule::unique('tables', 'table_number')->ignore($this->route('table'))],
-            'capacity' => ['required', 'integer', 'min:1', 'max:20'],
+            'capacity' => ['required', 'integer', Rule::in(array_keys(config('reservation.capacity_rules')))],
             'status' => ['required', 'in:available,maintenance'],
+            'expected_capacity' => ['required', 'integer', 'min:1'],
+            'expected_status' => ['required', 'in:available,maintenance'],
         ];
     }
 }

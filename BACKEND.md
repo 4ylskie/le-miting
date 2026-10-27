@@ -23,7 +23,7 @@
 
 ## 1. Backend Overview
 
-Le Miting uses Laravel as the backend framework. Laravel handles routing, business logic, database operations, authentication, authorization, validation, payment processing, email notifications, PDF generation, QR code generation, AI integration, and access control.
+Le Miting uses Laravel as the backend framework. Laravel handles routing, business logic, database operations, authentication, authorization, validation, payment processing, email notifications, PDF generation, AI integration, and access control.
 
 ```text
 Guest / Admin
@@ -61,14 +61,13 @@ External Services
 - Manage cart and order data (session-based cart)
 - Process FIUU payments and verify server-to-server callbacks
 - Generate receipts on demand via DomPDF
-- Generate reservation QR codes via `simplesoftwareio/simple-qrcode`
-- Send confirmation, cancellation, and feedback invitation emails
+- Generate unique readable reservation numbers
+- Send confirmation, cancellation, and optional Google Review invitation emails
 - Provide Rasa AI menu recommendations via OpenAI API
-- Process customer feedback
 - Process Contact Us enquiries
 - Protect guest resources through signed URLs
 - Manage administrator authentication and authorization
-- Manage menus, categories, tables, orders, reservations, and feedback
+- Manage menus, categories, tables, orders, and reservations
 - Generate weekly and monthly PDF reports
 
 ---
@@ -86,7 +85,6 @@ app/
 │   │   ├── OrderController.php
 │   │   ├── ReservationController.php
 │   │   ├── PaymentController.php
-│   │   ├── FeedbackController.php
 │   │   ├── ContactController.php
 │   │   ├── AiRecommendationController.php
 │   │   └── Admin/
@@ -96,14 +94,12 @@ app/
 │   │       ├── TableController.php
 │   │       ├── MenuCategoryController.php
 │   │       ├── MenuItemController.php
-│   │       ├── FeedbackController.php
 │   │       └── ReportController.php
 │   ├── Middleware/
 │   │   └── EnsureAdminRole.php
 │   └── Requests/
 │       ├── StoreOrderRequest.php
 │       ├── StoreReservationRequest.php
-│       ├── StoreFeedbackRequest.php
 │       ├── StoreContactRequest.php
 │       ├── UpdateMenuItemRequest.php
 │       └── UpdateTableRequest.php
@@ -118,13 +114,12 @@ app/
 │   ├── Payment.php
 │   ├── Reservation.php
 │   ├── ReservationFood.php
-│   └── Feedback.php
 │
 ├── Mail/
 │   ├── OrderConfirmationMail.php
 │   ├── ReservationConfirmationMail.php
 │   ├── ReservationCancellationMail.php
-│   ├── FeedbackInvitationMail.php
+│   ├── GoogleReviewInvitationMail.php
 │   └── ContactEnquiryMail.php
 │
 └── Services/
@@ -191,8 +186,6 @@ All routes are defined in `routes/web.php`. There is no `api.php`.
 | GET | `/orders/{order}/receipt` | `OrderController@receipt` | Generate + stream PDF receipt |
 | GET | `/reservation/{reservation}/cancel` | `ReservationController@cancelForm` | Display cancellation confirmation form |
 | POST | `/reservation/{reservation}/cancel` | `ReservationController@cancel` | Process cancellation → send ReservationCancellationMail |
-| GET | `/feedback/{token}` | `FeedbackController@create` | Display feedback form (token identifies order or reservation) |
-| POST | `/feedback/{token}` | `FeedbackController@store` | Store feedback → thank-you page with Google Review link |
 
 > Signed route note: Laravel's `signed` middleware validates the URL signature before the controller runs. An invalid, tampered, or expired signature returns a generic "this link is no longer valid" response — the controller never executes.
 
@@ -229,8 +222,6 @@ All admin routes are prefixed `/admin`.
 | GET | `/admin/menu/items/{item}/edit` | `Admin\MenuItemController@edit` | Edit menu item form |
 | PATCH | `/admin/menu/items/{item}` | `Admin\MenuItemController@update` | Update menu item |
 | PATCH | `/admin/menu/items/{item}/availability` | `Admin\MenuItemController@toggleAvailability` | Toggle item availability |
-| GET | `/admin/feedback` | `Admin\FeedbackController@index` | List feedback |
-| GET | `/admin/feedback/{feedback}` | `Admin\FeedbackController@show` | View feedback detail |
 | GET | `/admin/reports` | `Admin\ReportController@index` | Reports dashboard |
 | GET | `/admin/reports/weekly` | `Admin\ReportController@weekly` | Generate weekly PDF report |
 | GET | `/admin/reports/monthly` | `Admin\ReportController@monthly` | Generate monthly PDF report |
@@ -254,7 +245,6 @@ All admin routes are prefixed `/admin`.
 | `Payment` | `payments` | Payment record — belongs to either an Order or a Reservation, never both |
 | `Reservation` | `reservations` | Table reservations (table_only or table_and_food) |
 | `ReservationFood` | `reservation_foods` | Pre-ordered food items — `item_name` and `unit_price` are purchase-time snapshots |
-| `Feedback` | `feedback` | Post-completion ratings — linked to either an Order or a Reservation |
 
 ### 5.2 Relationships
 
@@ -276,7 +266,6 @@ Table
 Order
 ├── hasMany → OrderItem
 ├── hasOne  → Payment         (nullable — only for paid orders)
-└── hasOne  → Feedback        (nullable — only after status = completed)
 
 OrderItem
 ├── belongsTo → Order
@@ -291,15 +280,11 @@ Reservation
 ├── belongsTo → Table
 ├── hasMany   → ReservationFood
 ├── hasOne    → Payment       (nullable — only for table_and_food)
-└── hasOne    → Feedback      (nullable — only after status = completed)
 
 ReservationFood
 ├── belongsTo → Reservation
 └── belongsTo → MenuItem      (nullable — item may be soft-deleted)
 
-Feedback
-├── belongsTo → Order         (nullable)
-└── belongsTo → Reservation   (nullable)
    ↑ Exactly one of order_id / reservation_id is set.
    ↑ The referenced record must have status = completed.
 ```
@@ -349,7 +334,6 @@ Guests never log in. Protected guest actions use `URL::temporarySignedRoute()`:
 |---|---|
 | Download receipt | `GET /orders/{order}/receipt` |
 | Cancel reservation | `GET /reservation/{reservation}/cancel` + `POST /reservation/{reservation}/cancel` |
-| Submit feedback | `GET /feedback/{token}` + `POST /feedback/{token}` |
 
 Signed links are included in the relevant confirmation email. The `signed` middleware validates the signature before the controller runs. Invalid, tampered, or expired signatures return a generic "this link is no longer valid" message — no hint about which part failed, no fallback to raw ID access.
 
@@ -363,7 +347,6 @@ Laravel Form Requests enforce server-side validation before any controller logic
 |---|---|
 | `StoreOrderRequest` | `CheckoutController@store` |
 | `StoreReservationRequest` | `ReservationController@store` |
-| `StoreFeedbackRequest` | `FeedbackController@store` |
 | `StoreContactRequest` | `ContactController@store` |
 | `UpdateMenuItemRequest` | `Admin\MenuItemController@update` |
 | `UpdateTableRequest` | `Admin\TableController@update` |
@@ -387,7 +370,7 @@ Key validation rules:
 ```text
 Guest selects menu items
       ↓
-Session-based cart
+Session-based cart (`cart.order`; Table + Food uses isolated `cart.reservation`)
       ↓
 GET /checkout — CheckoutController@create
       ↓
@@ -402,7 +385,7 @@ OrderService:
   - Calculate total from live database prices (never from client)
   - Create Order (status: pending)
   - Create OrderItem rows (snapshot item_name + unit_price)
-  - Clear session cart
+  - Keep the relevant cart while payment is pending
       ↓
 Redirect to FIUU
       ↓
@@ -424,10 +407,12 @@ Payment verified?
   │
   └── No  → Payment.status = failed
              Order remains pending
-             Guest shown payment failure state with retry option
+             Guest can retry the existing eligible pending transaction
 ```
 
 **Total calculation rule:** `Order.total` is computed from `menu_items.price` × `order_items.quantity` at checkout time. It is stored on the order and never recalculated from changed menu prices later.
+
+The cart and checkout resolve current menu items and prices from the database. Unavailable or deleted items remain visible for removal, are excluded from the displayed total, and block checkout until removed. The applicable cart context is cleared only after verified payment confirms its parent.
 
 ---
 
@@ -451,8 +436,8 @@ Table available?
   │         Guest prompted to select another date / time
   │
   └── Yes → Create Reservation (reservation_type: table_only, status: confirmed)
-             Generate QR code (payload: reservation_number string)
-             ReservationConfirmationMail sent (QR embedded, signed cancellation link included)
+             Reservation number available for confirmation and lookup
+             ReservationConfirmationMail sent (reservation number and signed cancellation link included)
              Redirect to /reservation/{reservation}/confirmation
 ```
 
@@ -482,8 +467,7 @@ Table available?
              Payment verified?
                ├── Yes → Reservation.status = confirmed
                │         Payment row upserted (reservation_id set, order_id null)
-               │         Generate QR code (payload: reservation_number)
-               │         ReservationConfirmationMail sent
+               │         ReservationConfirmationMail sent with reservation number
                │         ReceiptService generates food pre-order PDF (attached to mail)
                │
                └── No  → Payment.status = failed
@@ -503,6 +487,8 @@ A `table_and_food` reservation in `pending` status blocks its table slot immedia
 ---
 
 ## 10. Payment Integration (FIUU)
+
+`FiuuPaymentService` remains the real gateway adapter. Development and demonstration environments use `MockPaymentService`, which redirects an eligible pending payment to a signed mock gateway. The browser submits only a fake payment method and demo outcome; the gateway reloads the payment, derives reference/amount/currency server-side, creates a mock-only HMAC result, and sends it through the existing verification and idempotent application path. Success, failure, abandonment, retry, callback processing, and browser return remain separate concepts. The mock processes no real funds and does not prove real FIUU compatibility.
 
 ```text
 Laravel
@@ -543,46 +529,44 @@ Two responses:
 ```text
 POST /ai/recommendations — AiRecommendationController@recommend (rate-limited)
       ↓
-Validate guest preferences (spice_level, protein_type, dietary_type, flavor_profile)
+Validate bounded guest text and/or canonical allergen exclusions; reject customer-posted structured preference selector fields
+Interpret supported text into internal menu-attribute, category, allergen-exclusion, and per-dish price filters
       ↓
-OpenAiService::recommend()
-  - Retrieve MenuItem rows where is_available = true
-  - Build prompt with available items + guest preferences
-  - Call OpenAI API
+AiRecommendationController filters database candidates by availability, active category and interpreted constraints
+AiRecommender::recommend(items, preferences)
+  - MockAiRecommender uses deterministic matching by default
+  - Configured OpenAiService sends eligible candidate attributes and preferences only
       ↓
 OpenAI returns recommendation response
       ↓
-OpenAiService validates response:
-  - Map each recommended item to a real MenuItem row
-  - Drop any item not found in the database or not is_available
+AiRecommendationController validates returned IDs:
+  - Reapply database price, availability, active-category and preference constraints
+  - Drop unknown or ineligible IDs and cap results at three
       ↓
 Return validated recommendations to view
 ```
+
+The mock and OpenAI recommenders receive only eligible candidates. The server rechecks returned IDs against the same database-backed filters. Unsupported, contradictory, and allergy-related text must not bypass this boundary or imply allergen safety.
 
 **Rules:**
 - OpenAI API key lives in `.env` — never in Blade templates or client-side JavaScript
 - AI may only recommend items that exist in `menu_items` and have `is_available = true`
 - AI failure returns a graceful fallback — Rasa AI is never a blocking dependency for ordering
-- The same `OpenAiService` is called from both `AiRecommendationController` (main Rasa AI page) and `ContactController` (Contact Us page) — one integration, two surfaces
+- Only the dedicated Rasa AI page uses AiRecommender; ContactController does not call a recommendation provider
 
 ---
 
-## 12. QR Code Generation
-
-Library: `simplesoftwareio/simple-qrcode`
+## 12. Reservation Identifier
 
 ```text
-Reservation status → confirmed
+Reservation created
       ↓
-QR generated server-side
-  - Payload: reservation_number string (e.g. RES-2026-00125)
-  - Plain text — not a signed URL, not a link
+Unique readable reservation_number assigned (e.g. RES-2026-00125)
       ↓
-QR image embedded in ReservationConfirmationMail
-QR image displayed on reservation confirmation page
+Displayed in the ReservationConfirmationMail, confirmation page, and admin records
 ```
 
-The QR payload is the `reservation_number` only. Signed URLs are sent separately in the same email for cancellation and feedback — they are not encoded into the QR. The reservation record in the database is the authoritative source; the QR is a convenience for check-in validation.
+The reservation number supports administrator lookup/check-in validation only. Signed URLs are separate credentials for cancellation and receipt retrieval; the reservation record in the database remains authoritative.
 
 ---
 
@@ -593,9 +577,9 @@ Five confirmed Mailables — no others:
 | Mailable | Trigger | Contains |
 |---|---|---|
 | `OrderConfirmationMail` | Payment verified (Order.status → confirmed) | Order summary, signed receipt link, PDF receipt attached |
-| `ReservationConfirmationMail` | Reservation.status → confirmed | Reservation details, QR code image, signed cancellation link |
+| `ReservationConfirmationMail` | Reservation.status → confirmed | Reservation details, readable reservation number, signed cancellation link |
 | `ReservationCancellationMail` | Reservation.status → cancelled | Cancellation confirmation |
-| `FeedbackInvitationMail` | Order or Reservation.status → completed | Signed feedback form link |
+| `GoogleReviewInvitationMail` | Order or Reservation.status → completed | Optional link to the configured external Google Review destination |
 | `ContactEnquiryMail` | Contact form submitted | Guest name, email, message — sent to restaurant |
 
 **No `PaymentConfirmationMail`** — the receipt PDF is attached to `OrderConfirmationMail` after payment is verified. No separate payment confirmation email exists.
@@ -639,31 +623,11 @@ No database record is created. If mail fails, the guest receives an error respon
 
 ---
 
-## 16. Feedback Processing
+## 16. External Google Review Invitation
 
-```text
-Guest opens signed feedback link (GET /feedback/{token})
-      ↓
-Signed middleware validates URL
-      ↓
-FeedbackController@create
-  - Resolve token to Order or Reservation
-  - Verify status = completed
-  - Display feedback form
-      ↓
-Guest submits (POST /feedback/{token})
-      ↓
-StoreFeedbackRequest validates: food_rating, service_rating, experience_rating (1–5), comment (optional)
-      ↓
-FeedbackController@store
-  - Verify exactly one of order_id / reservation_id is set
-  - Verify the referenced record is completed
-  - Store Feedback row
-      ↓
-Thank-you page with optional Google Review link
-```
+After an order or reservation first reaches `completed`, the relevant admin status transition sends `GoogleReviewInvitationMail` with the configured external Google Review destination. The email makes clear that a review is optional.
 
-Google Review is a static link that opens the restaurant's Google page in a new tab. Laravel does not call the Google API, does not submit a review, and does not send feedback data to Google.
+Le Miting has no feedback model, table, form, route, signed review link, internal review-management screen, or review report. The application does not call a Google API, submit a review, retrieve a review, or include internal transaction identifiers in the external URL. Google exclusively receives and stores a review submitted by the customer.
 
 ---
 
@@ -712,7 +676,7 @@ CRUD operations for all managed entities, all protected by `auth` + `EnsureAdmin
 
 **Orders** — view list, view details, update `status` (pending → confirmed → preparing → ready → completed / cancelled). Payment status is read-only — not editable by admin.
 
-**Reservations** — view list, search by `reservation_number` or QR content, confirm, cancel, mark completed, view guest count, view table, adjust table assignment, view pre-ordered food. Cancelled or completed reservations must not be presented as valid active check-ins.
+**Reservations** — view list, search by `reservation_number`, confirm, cancel, mark completed, view guest count, view table, adjust table assignment, view pre-ordered food. Cancelled or completed reservations must not be presented as valid active check-ins.
 
 **Tables** — create, edit, set `capacity`, toggle `status` between `available` and `maintenance`. Placing a table into maintenance is blocked when future confirmed reservations depend on it unless those reservations are first reassigned or cancelled.
 
@@ -720,9 +684,7 @@ CRUD operations for all managed entities, all protected by `auth` + `EnsureAdmin
 
 **Menu Items** — create, edit, toggle `is_available`, update price, description, image, category, `spice_level`, `protein_type`, `dietary_type`, `flavor_profile`, `is_featured`. Soft-delete to preserve historical records.
 
-**Feedback** — view list, view details (ratings + comment + linked order or reservation), view average ratings, filter.
-
-**Reports** — generate weekly and monthly PDFs on demand (sales, reservations, feedback). Report generation uses server-side aggregation from the database. No daily reports — not in PRD scope.
+**Reports** — generate weekly and monthly PDFs on demand for sales and reservations. Report generation uses server-side aggregation from the database. No daily reports — not in PRD scope.
 
 ---
 
@@ -751,7 +713,7 @@ CRUD operations for all managed entities, all protected by `auth` + `EnsureAdmin
           ┌──────────────────┼──────────────────────┐
           │                  │                       │
        Orders          Reservations              Menus
-       Payments          Tables                Feedback
+       Payments          Tables
           │                  │                       │
           └──────────────────┼───────────────────────┘
                              │
@@ -766,3 +728,21 @@ CRUD operations for all managed entities, all protected by `auth` + `EnsureAdmin
                              │
                       Guest / Admin
 ```
+
+---
+
+## REC-02B — Allergen assessment administration
+
+`MenuAllergenAssessmentController` provides authenticated ensure-admin GET index/edit and PATCH save/invalidate routes under `/admin/menu/items/{menuItem}/allergens`. Form Requests additionally require role=admin. Save accepts controlled recipe/cross-contact statuses, bounded evidence, documented-information attestation and a stale-form context; reviewer identity and UTC review time are server-owned.
+
+`MenuAllergenAssessmentService` saves transactionally with a menu-item row lock and unique pair enforcement. Admin menu updates use the same row lock and invalidate assessments when name, description, spice, protein, dietary or flavour attributes change. Price, image, availability and ordering edits do not invalidate reviews. Supplier, ingredient and preparation changes not represented in menu fields require explicit admin invalidation with a reason; this conservatively invalidates every assessment for the item. Prior evidence remains visible until replaced by a new review.
+
+`MenuItemAllergenAssessment::isCurrentFor()` requires provenance, no invalidation and a matching source fingerprint. Missing, incomplete or stale records must be treated as unknown. REC-02B itself introduces no elapsed-time expiry or customer filtering; REC-02C below defines the approved, assessment-backed exclusion path.
+
+## REC-02C — Fail-closed customer allergen exclusions
+
+`POST /ai/recommendations` accepts optional `preferences_text` (string, maximum 300 characters) and optional `excluded_allergens[]`. Require at least one non-blank text value or a non-empty array of valid canonical codes: `peanut`, `tree_nuts`, `milk`, `egg`, `soy`, `wheat_gluten`, `fish`, `crustacean_shellfish`, `molluscs`, `sesame`. Reject legacy structured preference selector inputs (`category`, `spice_level`, `protein`, `dietary`, `flavor`). `AiRecommendationOptions::interpretText()` maps only explicit supported English/Malay allergy/exclusion terms to those codes; merge and deduplicate text-derived codes with checkbox values. Generic/unspecified allergy or intolerance and unmapped allergens/intolerances fail closed with the staff-confirmation notice and zero calls to either provider. Use the phrase mappings listed in the PRD; aliases are recognition terms, not ingredient evidence.
+
+Before calling a provider, constrain candidates to available menu items in active categories. For each excluded code, a present assessment row is authoritative: only a current row with `recipe_status = reviewed_absent`, `cross_contact_status = reviewed_no_known_risk`, and complete reviewer/time/evidence provenance qualifies; stale, invalidated, incomplete, unknown, contains, or possible rows exclude the item. When no row exists for that item/code, apply deterministic canonical English/Malay ingredient matching to its name and description, ignoring explicit negative phrases; positive matches exclude and non-matches may proceed with a menu-check badge. Apply this same rule before provider calls and to every returned ID. If no candidates remain, return no recommendations and a staff-confirmation notice without invoking a provider; provider output is never authoritative for eligibility or allergen facts.
+
+For eligible returned results, render the shared-kitchen caution, instruct customers to tell staff before ordering, and show `Reviewed:` provenance for a qualifying current assessment or `Menu check: [allergen] not listed in dish name or description · Confirm with staff` when no row exists. Menu checks are not ingredient or cross-contact verification. Prohibit allergy-safe, allergen-free, 100%-safe, and equivalent claims in UI and OpenAI prompts. Relevant menu fingerprint/revision changes and explicit invalidation disqualify an existing assessment pending a new review. Provider output remains non-authoritative.

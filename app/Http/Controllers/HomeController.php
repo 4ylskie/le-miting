@@ -11,6 +11,8 @@ class HomeController extends Controller
         $featuredItems = MenuItem::with('category')
             ->where('is_featured', true)
             ->where('is_available', true)
+            ->whereHas('category', fn ($query) => $query->where('is_active', true))
+            ->orderBy('sort_order')
             ->limit(6)
             ->get();
 

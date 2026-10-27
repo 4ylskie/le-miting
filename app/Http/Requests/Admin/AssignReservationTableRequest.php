@@ -16,6 +16,8 @@ class AssignReservationTableRequest extends FormRequest
     {
         return [
             'table_id' => ['required', 'integer', Rule::exists('tables', 'id')],
+            'expected_table_id' => ['required', 'integer', Rule::exists('tables', 'id')],
+            'expected_status' => ['required', 'in:pending,confirmed,completed,cancelled'],
         ];
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('table_and_food confirmation mail includes QR, signed cancel and receipt links, total and payment reference', function () {
+test('table_and_food confirmation mail includes the reservation number, signed cancel and receipt links, total and payment reference', function () {
     config(['app.url' => 'http://localhost']);
 
     $reservation = Reservation::factory()->withFood()->confirmed()->create();
@@ -27,14 +27,14 @@ test('table_and_food confirmation mail includes QR, signed cancel and receipt li
     $html = (new ReservationConfirmationMail($reservation))->render();
 
     expect($html)
-        ->toContain('data:image/svg+xml;base64')
+        ->toContain($reservation->reservation_number)
         ->toContain('/reservation/'.$reservation->id.'/cancel?')
         ->toContain('/reservation/'.$reservation->id.'/receipt?')
         ->toContain('RM 20.00')
         ->toContain('PAY-2026-TESTREF01');
 });
 
-test('table_only confirmation mail has QR and cancel link but no receipt or payment reference', function () {
+test('table_only confirmation mail includes the reservation number and cancel link but no receipt or payment reference', function () {
     config(['app.url' => 'http://localhost']);
 
     $reservation = Reservation::factory()->confirmed()->create();
@@ -43,7 +43,7 @@ test('table_only confirmation mail has QR and cancel link but no receipt or paym
     $html = (new ReservationConfirmationMail($reservation))->render();
 
     expect($html)
-        ->toContain('data:image/svg+xml;base64')
+        ->toContain($reservation->reservation_number)
         ->toContain('/reservation/'.$reservation->id.'/cancel?')
         ->not->toContain('/receipt?');
 });

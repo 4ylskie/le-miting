@@ -39,44 +39,23 @@ Le Miting is a modern Malaysian restaurant website. The customer experience allo
 - Receive digital order and reservation confirmations.
 - Access receipts and reservation information through secure links.
 - Cancel eligible reservations.
-- Receive a reservation QR code for restaurant check-in.
-- Submit feedback after completing an order or reservation.
+- Receive a readable reservation number for restaurant check-in.
+- Optionally follow a Google Review invitation after completion.
 - Contact the restaurant through the Contact Us page.
 
-The administrator experience provides an operational interface for managing orders, reservations, tables, menus, categories, feedback, and reports.
+The administrator experience provides an operational interface for managing orders, reservations, tables, menus, categories, and reports.
 
 ---
 
 ## 2. UX Direction
 
-The overall experience is inspired by modern restaurant websites such as the Tangerine restaurant template — the primary visual and UX reference.
+The customer experience draws visual and art-direction inspiration from [Atomix](https://www.atomixnyc.com/): restraint, editorial composition, sophisticated typography, generous negative space, strong photography, sparse navigation, asymmetric layouts, deliberate pacing, minimal decoration, and subtle interaction.
 
-The reference influences the experience through:
+Atomix is an inspiration reference, not a template. Le Miting must not copy its branding, logo, wording, photography, layouts, artwork, or other proprietary assets.
 
-- Immersive restaurant presentation.
-- Strong food-focused visual sections.
-- Large, visually distinct content sections.
-- Editorial-style composition.
-- Prominent food imagery.
-- Clear restaurant storytelling.
-- Featured dishes and menu discovery.
-- Testimonials and social proof.
-- Strong calls to action.
-- Restaurant information.
-- A warm and welcoming hospitality-oriented experience.
+Le Miting combines Atomix-inspired restraint with contemporary Malaysian hospitality and practical restaurant ordering UX. It remains recognisably Le Miting through its verified menu content, guest ordering and reservations, Rasa AI, FIUU payment flow, and administrative functionality.
 
-The reference is an inspiration, not a template to reproduce. Le Miting retains its own:
-
-- Malaysian restaurant identity.
-- Kampung-inspired atmosphere.
-- Restaurant content and menu.
-- Ordering and reservation system.
-- Rasa AI recommendation feature.
-- FIUU payment flow.
-- Feedback system.
-- Administrative functionality.
-
-The interface should feel like a real restaurant website first and a software system second.
+The interface should feel like a composed restaurant experience first and a dependable transaction system throughout. It must not depend on unsupported restaurant history, testimonials, ratings, social proof, or fabricated business claims.
 
 ---
 
@@ -86,13 +65,13 @@ The interface should feel like a real restaurant website first and a software sy
 
 Guests do not need registration, login, or accounts. They complete all primary tasks without creating a profile.
 
-Primary guest tasks: discover Le Miting, browse the menu, use Rasa AI, order food, reserve a table, pre-order food with a reservation, pay via FIUU, view confirmations, access receipts, cancel eligible reservations, use the QR code at check-in, submit feedback, contact the restaurant.
+Primary guest tasks: discover Le Miting, browse the menu, use Rasa AI, order food, reserve a table, pre-order food with a reservation, pay via FIUU, view confirmations, access receipts, cancel eligible reservations, use the reservation number at check-in, optionally follow an external Google Review invitation after completion, and contact the restaurant.
 
 ### 3.2 Administrators
 
 Administrators use a protected panel. The admin interface prioritises operational efficiency over immersive presentation.
 
-Administrator tasks: monitor operations, manage orders, manage reservations, manage tables, manage menu items and categories, review feedback, generate reports.
+Administrator tasks: monitor operations, manage orders, manage reservations, manage tables, manage menu items and categories, and generate reports.
 
 ---
 
@@ -102,13 +81,13 @@ Administrator tasks: monitor operations, manage orders, manage reservations, man
 
 **Guest-friendly** — Order and reserve without an account. Collect only the information needed to complete the transaction.
 
-**Food-focused** — Food is a major part of the experience. Menu items are presented with image, name, description, price, availability, and rating where available.
+**Food-focused** — Food is a major part of the experience. Menu items present their real name, description, price, and availability. Real menu imagery is used when available; the layout remains deliberate and useful when it is not.
 
-**Task-focused** — Order and Reserve are always easy to reach. Contact Us and Feedback remain accessible without competing with the primary actions.
+**Task-focused** — Order and Reserve are always easy to reach. Contact Us remains accessible without competing with the primary actions.
 
 **Clear feedback** — Loading, success, validation errors, payment failure, empty states, availability conflicts, and access failures all provide an explicit response.
 
-**Consistent** — Buttons, forms, navigation, cards, status indicators, dialogues, loading states, and validation behave identically wherever they appear.
+**Consistent** — Buttons, forms, navigation, content groupings, status indicators, dialogues, loading states, and validation behave identically wherever they appear.
 
 **Responsive** — Usable across desktop, laptop, tablet, and mobile. Layouts adapt rather than shrink.
 
@@ -126,8 +105,8 @@ Le Miting
 ├── Landing Page
 │   ├── Restaurant Introduction
 │   ├── Featured Dishes
-│   ├── Restaurant Experience
-│   ├── Testimonials
+│   ├── Verified Restaurant Introduction (when supplied)
+│   ├── Editorial Food / Atmosphere Moment (when supplied)
 │   ├── Order CTA
 │   ├── Reservation CTA
 │   ├── Contact Information
@@ -150,7 +129,6 @@ Le Miting
 │
 ├── Contact Us
 │
-└── Feedback
 ```
 
 Navigation lets guests move between major areas without being forced through the order or reservation flow.
@@ -159,29 +137,29 @@ Navigation lets guests move between major areas without being forced through the
 
 ## 6. Landing Page UX
 
-The landing page is the primary introduction to Le Miting. It creates an immersive restaurant experience in the spirit of the Tangerine reference while maintaining Le Miting's Malaysian and kampung-inspired identity.
+The landing page is the primary introduction to Le Miting. It uses an Atomix-inspired editorial pace while preserving rapid access to ordering, reservations, Rasa AI, and Contact Us. It may contain only verified restaurant content and approved assets.
 
 ### 6.1 Hero Section
 
-Communicates: Le Miting branding, Malaysian food identity, a concise restaurant introduction, and primary actions.
+Communicates: Le Miting branding, a concise verified introduction where supplied, and primary actions.
 
-May use a food-focused slideshow or immersive presentation. Provides clear access to **Order** and **Reserve**. The visual presentation must not delay reaching the main tasks.
+Use an immersive, typography-led hero with approved photography only when it is available. A static Full Warm Culinary CSS backdrop may sit behind the hero and page shell as ambient background art; it is not a substitute for photography or restaurant content. Do not use a slideshow, video, fabricated image, empty decorative media block, unrelated gradients, or emoji placeholder. Provide clear access to **Order** and **Reserve** without delaying the main tasks.
 
 ### 6.2 Restaurant Introduction
 
-A dedicated section communicating what makes Le Miting distinctive: Malaysian cuisine, traditional influence, restaurant atmosphere, heritage and authenticity, modern convenience.
+A restrained section for approved, verified restaurant information. If no verified introduction is available, omit this section rather than inventing history, heritage, chef, family, quality, or hospitality claims.
 
 ### 6.3 Featured Dishes
 
-Showcases selected menu items with enough information to understand the dish before entering the full menu. Provides a natural path toward browsing or ordering.
+Showcases selected real menu items with enough information to understand the dish before entering the full menu. Use editorial media treatment when an approved item image exists; otherwise use a typography-led menu row without an artificial image box. Provides a natural path toward browsing or ordering.
 
-### 6.4 Restaurant Experience
+### 6.4 Editorial Story or Atmosphere Moment
 
-Several short, visually distinct sections communicating the restaurant experience: authentic flavours, homemade food, kampung heritage, friendly atmosphere. Communicates the experience rather than overwhelming with text.
+An optional, visually distinct moment may use approved restaurant photography or verified content to pace the landing page. It is omitted when no such content exists. It must not claim family history, heritage, chef biography, awards, service quality, or facilities unless those claims are verified and approved.
 
-### 6.5 Testimonials
+### 6.5 Content Evidence Boundary
 
-Social proof displayed clearly. Reviews identify the source where applicable. No likes, replies, or public discussion interface.
+The landing page does not display testimonials, customer quotes, reviewer names, ratings, review scores, awards, statistics, or other social proof unless a separately approved source and product requirement are added. Visual whitespace is not filled with fabricated facts.
 
 ### 6.6 Order and Reserve CTAs
 
@@ -194,7 +172,7 @@ Reserve a Table
 
 ### 6.7 Restaurant Information
 
-Address, phone number, email, and operating hours are available on the landing page and the Contact Us page.
+Verified, configured address, phone number, email, and operating hours are available on the landing page and the Contact Us page. When they are not available, omit the facts rather than supplying placeholders.
 
 ---
 
@@ -246,29 +224,30 @@ Rasa AI assists menu discovery. It is clearly presented as optional and never re
 
 ### 9.1 Preference Inputs
 
-The guest provides preferences such as spice level, protein, flavour, dietary preference, and beverage preference. Language is plain and guest-facing — no technical AI terminology.
+The dedicated Rasa AI page has a labelled text field (maximum 300 characters), short example prompts, and a labelled group of checkboxes for the ten controlled allergen exclusions. Require at least one non-blank text preference or one selected allergen. Text may describe spice, protein, flavour, dietary preference, category, and a per-dish budget; legacy preference selectors are not shown. Explicit supported English/Malay allergen terms in text merge with selected exclusions. Unsupported, generic, or unmapped allergy/intolerance requests receive a clear staff-confirmation explanation and are not sent to a provider.
 
 ### 9.2 Recommendation Results
 
 Each recommended item displays:
 
 ```text
-Food image
+Food image where available
 Name
 Description
 Price
-Rating (where available)
 Brief explanation of why the item was recommended
 ```
 
 Guests can:
 - Add recommended items to the cart.
-- Retake the Rasa AI questionnaire.
+- Try another text request.
 - Continue to the full menu.
 
-### 9.3 Rasa AI on Contact Us
+When allergen exclusions are selected or recognized and results are returned, show the shared-kitchen caution and tell customers to inform staff before ordering. Current admin assessments govern when a row exists; only current reviewed-absent/no-known-cross-contact records qualify. Stale, invalidated, incomplete, unknown, contains, or possible rows exclude the dish. If no row exists, name and description terms are checked against the canonical English/Malay ingredient list with explicit negative phrases ignored; non-matches receive a `Menu check: [allergen] not listed in dish name or description · Confirm with staff` badge. Menu wording is not ingredient or cross-contact verification. Never label an item allergy-safe, allergen-free, or 100% safe. If no item qualifies, show no recommendations and a clear staff-confirmation caution; do not show unrelated fallback dishes or call a provider.
 
-The Rasa AI widget appears on the Contact Us page as a second entry point to the same feature. It behaves identically — same inputs, same results, same failure state. It is not a separate AI system.
+### 9.3 Dedicated Rasa AI page
+
+The recommendation form (free text plus controlled allergen-exclusion checkboxes) is available on the dedicated page only. Contact Us does not embed a second recommendation form.
 
 ### 9.4 Rasa AI Failure
 
@@ -291,11 +270,10 @@ Guests can: browse categories, search by dish name, filter menu items, view feat
 Each menu item displays:
 
 ```text
-Image
+Image where available
 Name
 Description
 Price
-Rating
 Availability
 ```
 
@@ -305,7 +283,7 @@ Unavailable items are not presented as normally orderable. The interface clearly
 
 ## 11. Menu Search and Filtering
 
-Supports: search by dish name, category filtering, menu attribute filtering (spice level, protein type, dietary type, flavour profile), popularity and rating filtering where supported.
+Supports: search by dish name, category filtering, and menu attribute filtering (spice level, protein type, dietary type, flavour profile).
 
 Filters are easy to understand. When no items match, display a clear empty state with an action to broaden or clear the selection.
 
@@ -365,6 +343,8 @@ FIUU is used for all applicable payments. The guest-facing experience communicat
 
 - Amount being paid.
 - Payment provider (FIUU).
+
+Development and demonstration environments instead show a visually distinct “Le Miting Demo Payment Gateway”. It prominently states that no funds are transferred, presents only fake method choices, supports success, failure, or abandonment, and never requests financial credentials. Its signed gateway access and mock-only verified result reproduce the application lifecycle without claiming FIUU protocol compatibility.
 - Current payment state.
 - Payment result.
 
@@ -455,7 +435,7 @@ Customer Details
         ↓
 Confirm Reservation
         ↓
-QR Code
+Reservation Number
         ↓
 Reservation Email
 ```
@@ -468,7 +448,7 @@ Reservation date and time
 Guest count
 Assigned table
 Reservation status
-QR code
+Reservation number
 ```
 
 ---
@@ -530,7 +510,7 @@ Payment Verification
         ↓
 Reservation Confirmed
         ↓
-QR Code
+Reservation Number
         ↓
 Email Confirmation
 ```
@@ -555,26 +535,11 @@ The interface must never imply that an expired unpaid reservation remains confir
 
 ---
 
-## 21. Reservation QR Code UX
+## 21. Reservation Identifier UX
 
-A QR code is generated after successful reservation confirmation.
+A readable reservation number is displayed after successful reservation confirmation.
 
-**The QR code is used for:**
-```text
-Reservation validation
-Customer check-in
-Identifying the reservation for administrators
-Supporting reservation and table status updates
-```
-
-**The QR code is not used for:**
-```text
-Payment
-Feedback
-Receipt retrieval
-```
-
-The QR presentation makes its purpose clear. The reservation number is also displayed as readable text — the guest is never dependent on the QR image alone.
+The reservation number supports reservation validation, customer check-in, and administrator lookup. It is not used for payment, receipt retrieval, or cancellation; those actions use their own protected flows.
 
 ---
 
@@ -604,7 +569,6 @@ Accessible via signed link:
 ```text
 Receipt download
 Reservation cancellation
-Feedback form
 ```
 
 The interface never suggests that a guest can access another guest's information by entering a sequential number.
@@ -626,7 +590,7 @@ Contact Us
     ↓
 View Restaurant Information
     ↓
-Optional Rasa AI Widget
+No embedded recommendation form
     ↓
 Fill Contact Form
     ↓
@@ -644,11 +608,11 @@ Submit
       End
 ```
 
-Displays: address, phone, email, operating hours.
+Displays verified, configured address, phone, email, and operating hours when available. It does not show invented or placeholder business details.
 
 Contact form fields: name (required), email (required), message (required).
 
-The Rasa AI widget is optional — it does not block the contact form.
+Rasa AI remains separate from the contact enquiry form.
 
 The enquiry does not create an order or reservation. It is sent to the restaurant by email. No guest-facing reply system exists.
 
@@ -656,42 +620,11 @@ The enquiry does not create an order or reservation. It is sent to the restauran
 
 ---
 
-## 25. Feedback UX
+## 25. External Google Review Invitation UX
 
-Feedback is available only after an order or reservation is marked `completed`. The guest accesses the form through the signed link in the feedback invitation email — not by navigating directly.
+When an order or reservation first reaches `completed`, the customer may receive an email with a button to the configured external Google Review destination. The invitation clearly states that leaving a review is optional and happens on Google.
 
-```text
-Order / Reservation
-        ↓
-Completed
-        ↓
-Feedback Invitation Email
-        ↓
-Feedback Form
-        ↓
-Feedback Saved
-        ↓
-Thank-you page with optional Google Review link
-```
-
-**Feedback form:**
-
-```text
-Food rating: 1–5
-Service rating: 1–5
-Experience rating: 1–5
-Comment (optional)
-```
-
-After submitting, the guest sees a thank-you page with an optional link to Le Miting's Google review page. The interface makes clear that the Google review is a separate, optional action and is not automatically submitted by Le Miting.
-
-**Expired feedback link:**
-
-```text
-This feedback link is no longer valid.
-```
-
-No alternative route that accepts an arbitrary order or reservation number.
+There is no local feedback form, thank-you page, signed feedback URL, ratings field, comment field, review-management page, or review report. Le Miting does not submit a review or retain Google review content.
 
 ---
 
@@ -710,7 +643,6 @@ Admin
     ├── Tables
     ├── Menu Management
     ├── Categories
-    ├── Feedback
     └── Reports
 ```
 
@@ -737,7 +669,6 @@ Today's revenue
 Pending orders
 Pending reservations
 Available tables
-Recent feedback
 ```
 
 Helps administrators understand the current restaurant situation quickly. No complex analytics in V1.
@@ -761,7 +692,7 @@ Payment status is system-controlled — administrators view it, they do not edit
 
 ## 30. Admin Reservation Management UX
 
-Administrators can: view reservations, search reservations, look up by reservation number, look up by QR content, confirm reservations, cancel reservations, mark reservations completed, view guest count, view selected table, adjust table assignment, view pre-ordered food.
+Administrators can: view reservations, search reservations, look up by reservation number, confirm reservations, cancel reservations, mark reservations completed, view guest count, view selected table, adjust table assignment, view pre-ordered food.
 
 **Reservation statuses:**
 
@@ -800,14 +731,6 @@ If deletion is blocked because items still use the category, the interface expla
 
 ---
 
-## 34. Admin Feedback Management UX
-
-Administrators can: view feedback, view food / service / experience ratings, view comments, view the linked order or reservation, view average ratings, filter feedback.
-
-Feedback is presented as operational information, not a social feed.
-
----
-
 ## 35. Admin Reports UX
 
 ```text
@@ -816,7 +739,7 @@ Reports
 └── Monthly Report → Generate PDF → Download
 ```
 
-Covers: sales reports, reservation reports, feedback reports — weekly and monthly.
+Covers: sales and reservation reports — weekly and monthly.
 
 Reports are generated on demand. The interface communicates: report type, reporting period, generation status, successful generation, and generation failure.
 
@@ -826,7 +749,7 @@ The customer-facing website does not expose the reporting interface.
 
 ## 36. Navigation UX
 
-**Customer navigation** — lightweight, persistent:
+**Customer navigation** — sparse, persistent, and task-oriented. It uses a wordmark or text treatment until an approved logo exists. It contains no invented iconography or decorative controls.
 
 ```text
 Home
@@ -835,9 +758,9 @@ Reserve
 Contact Us
 ```
 
-Feedback is accessed through the transaction-specific email link, not general navigation.
-
 **Admin navigation** — separate from customer navigation, persistent access to all operational sections.
+
+On small screens, navigation collapses behind an accessible control with an accurate `aria-expanded` state and an `aria-controls` relationship. Cart access remains visible without competing with Order and Reserve.
 
 ---
 
@@ -849,10 +772,12 @@ Action-oriented labels:
 Order Now          Browse Menu       Get Rasa AI Recommendations
 Reserve a Table    Add to Cart       View Cart
 Proceed to Checkout   Pay Now        Confirm Reservation
-Cancel Reservation    Submit Feedback   Send Enquiry
+Cancel Reservation    Send Enquiry
 ```
 
 Primary actions are visually distinguishable from secondary actions. Destructive actions (cancellation) require confirmation where the action cannot easily be reversed. Submitted actions prevent accidental duplicate submission. Disabled actions communicate why they are unavailable where practical.
+
+Actions use the shared restrained button system: solid dark primary action, bordered or text-only secondary action, and an explicit destructive treatment. Buttons are not pill-shaped by default, do not rely on heavy shadows, and preserve visible focus and practical touch targets.
 
 ---
 
@@ -861,6 +786,8 @@ Primary actions are visually distinguishable from secondary actions. Destructive
 Forms: use clear labels, identify required fields, group related information logically, preserve entered values after recoverable failures, display validation errors near the relevant field, use understandable messages, never expose technical errors.
 
 Browser-side validation improves speed but server-side validation is always enforced.
+
+Forms use quiet borders, clear labels, generous vertical spacing, persistent visible focus, and field-associated error text. Transaction and reservation forms prioritise a linear reading order over dashboard-like panels.
 
 ---
 
@@ -1002,9 +929,9 @@ Areas requiring particular attention:
 
 ```text
 Navigation            Hero sections         Food imagery
-Menu grids            Menu cards            Filters and search
+Menu grids            Menu layouts          Filters and search
 Cart                  Checkout forms        Reservation forms
-Table selection       QR display            Confirmation screens
+Table selection       Reservation details   Confirmation screens
 Admin tables          Admin navigation      Buttons and controls
 Touch interactions
 ```
@@ -1022,7 +949,7 @@ Clear navigation             Large touch targets
 Readable menu information    Easy quantity controls
 Simple checkout              Easy reservation selection
 Visible payment state        Accessible confirmation
-QR code visibility
+Reservation number visibility
 ```
 
 No horizontal scrolling for normal tasks.
@@ -1050,38 +977,69 @@ No horizontal scrolling for normal tasks.
 
 ## 49. Visual Direction
 
-The visual experience communicates: Malaysian culinary identity, kampung-inspired character, authenticity, warmth, hospitality, food quality, modern convenience.
+The customer-facing visual system is Atomix-inspired restraint + contemporary Malaysian hospitality + practical restaurant ordering UX. It favours editorial hierarchy, generous negative space, sparse navigation, asymmetric composition where it aids pacing, deliberate typography, thin dividers, and minimal interface decoration. A static Full Warm Culinary CSS backdrop with dark-glass functional surfaces is the approved ambient theme. It does not copy Atomix branding, content, photography, layouts, artwork, or proprietary assets.
 
-The Tangerine reference influences composition and atmosphere through: large visual sections, food-first presentation, strong editorial hierarchy, immersive imagery, distinct content sections, prominent CTAs, restaurant storytelling, testimonials, featured-food sections.
+### 49.1 Design Tokens
 
-Le Miting does not copy Tangerine's exact colours, typography, layout, images, text, animations, components, or branding. The final implementation must feel like Le Miting.
+Use the following reusable customer-site tokens for the Full Warm Culinary Shader theme:
+
+| Token | Value | Use |
+|---|---|---|
+| Shader base | `#16110E` | Deep espresso canvas and page foundation |
+| Terracotta | `#975B3E` | Static ambient CSS gradient |
+| Saffron amber | `#C87D4B` | Static ambient CSS gradient |
+| Roasted clove | `#5C3020` | Static ambient CSS gradient |
+| Secondary espresso | `#3E271E` | Static ambient CSS gradient |
+| Dark glass | `rgba(30, 22, 18, 0.72)` | Functional navigation, forms, and grouped surfaces; blur 18px |
+| Glass border | `rgba(216, 180, 148, 0.22)` | Quiet surface and field separation |
+| Warm ivory | `#FAF6F0` | Primary text and high-contrast controls |
+| Muted sand | `#D5CBBF` | Secondary text and metadata |
+| Saffron accent | `#E7A26E` | Links, selected state, primary emphasis |
+| Terracotta accent | `#C87D4B` | Secondary emphasis |
+| Danger | `#A43C32` | Destructive action and error emphasis, paired with text |
+
+The approved backdrop uses a deep-espresso base with static soft radial gradients in the listed terracotta, amber, clove, and secondary tones, filling the viewport edge to edge. It is the sole ambient gradient treatment; no unrelated gradients, neon, saturated green sections, purple AI styling, or multiple competing accents are permitted. Dark-glass surfaces use square-to-4px geometry and restrained borders, not stacked oversized cards. Color cannot be the sole communication of state. Text and controls must remain readable over the translucent surface.
+
+### 49.2 Typography, Spacing, and Geometry
+
+- **Display / H1 / H2:** `DM Serif Display`, a free/open editorial serif, weight 400. Use it only for display hierarchy.
+- **H3, body, metadata, labels, controls:** Instrument Sans. Preserve its current role as the UI and body typeface.
+- **Display:** `clamp(3rem, 7vw, 6.5rem)`, line-height 0.95–1.0.
+- **H1:** `clamp(2.5rem, 5vw, 4.5rem)`, line-height 1.0.
+- **H2:** `clamp(2rem, 3.5vw, 3.25rem)`, line-height 1.1.
+- **H3:** 1.25rem, line-height 1.25; **body:** 1rem, line-height 1.6; **metadata:** 0.875rem; **eyebrow / label:** 0.75rem, restrained uppercase tracking.
+- **Container:** maximum 80rem; gutters 1.25rem mobile, 2rem tablet, and 3rem desktop.
+- **Section spacing:** `clamp(4.5rem, 8vw, 9rem)`; use smaller, deliberate spacing inside transactional screens.
+- **Geometry:** 1px warm glass dividers; square to 4px radii; no default shadow; use a single subtle shadow only where elevation is essential.
+
+Pages use whitespace and hierarchy; dark-glass panels are reserved for functional navigation, forms, and content groupings rather than decorative card stacking.
 
 ---
 
 ## 50. Motion and Interaction
 
-Motion reinforces the restaurant experience. Appropriate uses:
+Motion reinforces orientation and feedback without becoming a decorative feature. Appropriate uses:
 
 ```text
-Hero transitions
-Food image transitions
-Section reveals
-Hover feedback
+Subtle opacity or translate entry
+Color and border feedback
+Subtle food-image scale on hover
 Cart interactions
 Loading feedback
+Static, low-amplitude ambient gradients behind content
 ```
 
 Motion is subordinate to usability. Animations must not: delay important tasks, obscure information, prevent interaction, or create excessive movement. `prefers-reduced-motion` is always respected. The interface is fully understandable with animations disabled.
 
-Animation duration: 150–300ms with ease-out. Loading feedback shows within 80ms of action.
+Control and feedback transitions use 150–300ms with ease-out. The ambient culinary backdrop is static for all users. Avoid autoplaying hero media, looping decorative UI animation, parallax, and motion that shifts reading position. Loading feedback shows within 80ms of action. `prefers-reduced-motion` disables non-essential transitions and animations.
 
 ---
 
 ## 51. Imagery and Food Presentation
 
-Food imagery supports: menu discovery, featured dishes, restaurant identity, Rasa AI recommendations, landing-page storytelling.
+Food imagery supports menu discovery, featured dishes, Rasa AI recommendations, and landing-page pacing only when it is approved and available. It is never fabricated, generated, hotlinked, downloaded as random stock photography, or replaced with an emoji, gradient, or fake image URL.
 
-Meaningful images have appropriate alternative text. Large images and hero media are optimised for performance. If video is used in the hero, an appropriate fallback exists for performance or accessibility reasons.
+Where a runtime menu-item image exists, display it with an appropriate crop, meaningful alternative text, responsive dimensions, and performance-conscious loading. Where it does not exist, render a deliberate typography-led layout without an empty decorative media box. Large approved photography is responsive and optimised. Hero video is not part of the customer visual direction.
 
 ---
 
@@ -1120,7 +1078,7 @@ Reservation date and time
 Guest count
 Assigned table (where applicable)
 Payment status
-QR code purpose
+Reservation number purpose
 ```
 
 Confirmation screens and emails prioritise these details.
@@ -1132,16 +1090,15 @@ Confirmation screens and emails prioritise these details.
 Reusable components behave consistently throughout the application:
 
 ```text
-Navigation               Buttons                Forms
-Input fields             Validation messages    Food cards
-Featured food sections   Category filters       Search
-Cart items               Quantity controls      Status badges
-Alerts                   Confirmation dialogs   Table selection
-Loading indicators       Empty states           Error states
-QR display               Admin data tables      Rasa AI widget
+Customer navigation       Footer                 Editorial section heading
+Primary / secondary action Form field            Validation message
+Menu media treatment      Typography-led menu row Category filters / search
+Cart item / summary       Quantity control       Status badge / alert
+Table selection           Loading / empty / error state
+Receipt-like confirmation Reservation detail      Rasa AI preference form
 ```
 
-Repeated components preserve consistent interaction behaviour while adapting layout for different screen sizes.
+Repeated components preserve consistent interaction behaviour while adapting layout for different screen sizes. A universal card component is not required: use containers only when grouping, form affordance, or transaction clarity needs one.
 
 ---
 
@@ -1174,23 +1131,19 @@ Repeated components preserve consistent interaction behaviour while adapting lay
        ├── FIUU Payment
        └── Reservation Confirmation
 
-4. Reservation QR / Information
+4. Reservation Information
 
 5. Reservation Cancellation
 
 6. Contact Us
    ├── Restaurant Information
-   ├── Optional Rasa AI Widget
+   ├── No embedded recommendation form
    └── Contact Form
 
-7. Feedback
-   ├── Feedback Form
-   └── Feedback Confirmation + Google Review Link
+7. Guest Secure Access
+   └── Signed-link receipt / cancellation entry points
 
-8. Guest Secure Access
-   └── Signed-link receipt / cancellation / feedback entry points
-
-9. Global States
+8. Global States
    └── Loading / Empty / Error / Expired Link
 ```
 
@@ -1224,16 +1177,11 @@ Repeated components preserve consistent interaction behaviour while adapting lay
    ├── Category List
    └── Category Create / Edit
 
-8. Feedback
-   └── Feedback List / Details
-
-9. Reports
+8. Reports
    ├── Weekly Sales Report
    ├── Monthly Sales Report
    ├── Weekly Reservation Report
-   ├── Monthly Reservation Report
-   ├── Weekly Feedback Report
-   └── Monthly Feedback Report
+   └── Monthly Reservation Report
 
 10. Admin Global States
     └── Loading / Empty / Error / Unauthorised Access
@@ -1267,10 +1215,10 @@ Those concerns belong in `TECHNICAL_DESIGN.md` and `BACKEND_DESIGN.md`.
 - Table + Food reservation completes with FIUU payment.
 - Table availability is understandable.
 - Reservation confirmation status is clear.
-- QR code is accessible and its purpose is explained.
+- Reservation number is clearly displayed and explained.
 - Eligible reservations can be cancelled.
 - Receipt is accessible through the signed link.
-- Feedback is only available after completion.
+- Completed transactions may receive an optional external Google Review invitation.
 - Contact Us is easy to reach and use.
 - Clear feedback is given when something fails.
 
@@ -1281,7 +1229,6 @@ Those concerns belong in `TECHNICAL_DESIGN.md` and `BACKEND_DESIGN.md`.
 - Reservation status is clear.
 - Table availability is clear.
 - Menu management is straightforward.
-- Feedback is easy to review.
 - Reports are easy to generate.
 - Destructive actions require confirmation.
 - Unauthorised users cannot access the admin panel.
@@ -1309,7 +1256,7 @@ Those concerns belong in `TECHNICAL_DESIGN.md` and `BACKEND_DESIGN.md`.
 
 ## 59. Final UX Definition
 
-Le Miting should feel like a modern Malaysian restaurant website with a strong food and hospitality identity — not a generic ordering application.
+Le Miting should feel like a contemporary Malaysian restaurant website with restrained editorial hospitality — not a generic ordering application or a copied Atomix site.
 
 The guest experience combines:
 
@@ -1328,12 +1275,26 @@ Clear FIUU Payment
               +
 Digital Confirmation
               +
-Post-Dining Feedback
+Optional Google Review Invitation
 ```
 
-The Tangerine restaurant template serves as the primary inspiration for the immersive, editorial, food-focused presentation. Le Miting retains its own Malaysian and kampung-inspired identity and all requirements defined in `PRD.md`.
+Atomix informs restraint, editorial hierarchy, typography, photography-first pacing, sparse navigation, and subtle interaction. Le Miting retains its own verified content, identity, and all requirements defined in `PRD.md`. Unsupported history, testimonials, ratings, review scores, social proof, business facts, and imagery are omitted until verified and approved.
 
 ```text
 Make Le Miting feel like a restaurant first,
 while making ordering and reservation effortless.
 ```
+
+---
+
+## REC-02B — Admin allergen assessment interface
+
+Existing menu edit pages link to a dedicated assessment list showing all ten allergens, separate recipe/cross-contact statuses, reviewer and UTC review time. Missing records show Unknown / Not reviewed. Stale or invalidated reviews show Unknown / review required, not a verified badge. The review form displays last evidence and invalidation provenance, requires documented evidence and an explicit attestation, and associates validation errors with labelled controls.
+
+Admins record ingredient, supplier, recipe or preparation changes using the invalidation form. New reviews default invalidated statuses to unknown. Copy must distinguish reviewed absence from cross-contact assessment and must never promise allergy safety. REC-02C uses current assessments when present and a limited menu-text check only when no item/allergen row exists; it does not claim or imply allergy safety.
+
+## REC-02C — Customer allergen-exclusion states
+
+Use a clearly labelled “Avoid these allergens” checkbox group with the canonical ten names. Keep the text field optional when one or more exclusions are selected and require a selection when text is blank. Associate validation errors with their input/group and preserve safe submitted values. An unmapped/generic allergy request and a no-eligible-items result must be visibly distinct from provider failure, advise direct staff confirmation, and never display unrelated recommendations.
+
+For qualifying results, show the shared-kitchen caution and a per-item factual badge for every selected allergen: reviewed absent from the recipe and no known cross-contact risk. Explain that this is based on admin-reviewed records, is not a guarantee of an allergen-free meal in an active kitchen, and customers must tell staff before ordering. Never use allergy-safe/allergen-free/100%-safe labels. Keep the checkbox group, caution, badges, errors, and results responsive, keyboard-operable, and clearly associated with their labels.

@@ -22,7 +22,7 @@ class OrderFactory extends Factory
             'customer_name' => $this->faker->name(),
             'customer_email' => $this->faker->safeEmail(),
             'customer_phone' => $this->faker->numerify('01#########'),
-            'order_type' => $this->faker->randomElement(['dine_in', 'takeaway', 'delivery']),
+            'order_type' => $this->faker->randomElement(['dine-in', 'takeaway']),
             'status' => 'pending',
             'total' => $this->faker->randomFloat(2, 20, 200),
         ];

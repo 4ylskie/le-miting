@@ -7,8 +7,13 @@ use App\Http\Requests\Admin\StoreMenuItemRequest;
 use App\Http\Requests\Admin\UpdateMenuItemRequest;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
+use App\Models\MenuItemAllergenAssessment;
+use App\Services\MenuAllergenAssessmentService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class MenuItemController extends Controller
@@ -43,7 +48,7 @@ class MenuItemController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('menu', 'public');
+            $data['image_path'] = $this->storeImage($request->file('image'));
         }
 
         unset($data['image']);
@@ -65,18 +70,28 @@ class MenuItemController extends Controller
     public function update(UpdateMenuItemRequest $request, MenuItem $menuItem)
     {
         $data = $request->validated();
+        $previousImagePath = $menuItem->image_path;
 
         if ($request->hasFile('image')) {
-            if ($menuItem->image_path) {
-                Storage::disk('public')->delete($menuItem->image_path);
-            }
-
-            $data['image_path'] = $request->file('image')->store('menu', 'public');
+            $data['image_path'] = $this->storeImage($request->file('image'));
         }
 
         unset($data['image']);
 
-        $menuItem->update($data);
+        DB::transaction(function () use ($menuItem, $data, $request): void {
+            $locked = MenuItem::whereKey($menuItem->id)->lockForUpdate()->firstOrFail();
+            $locked->fill($data);
+            $requiresReview = $locked->isDirty(MenuItemAllergenAssessment::RELEVANT_FIELDS);
+            $locked->save();
+            if ($requiresReview) {
+                app(MenuAllergenAssessmentService::class)->invalidate($locked, $request->user(), 'Menu description or recipe-related attributes changed.');
+            }
+            $menuItem->setRawAttributes($locked->getAttributes(), true);
+        });
+
+        if (isset($data['image_path'])) {
+            $this->deleteMenuImage($previousImagePath);
+        }
 
         return redirect()->route('admin.menu.items.index')
             ->with('status', 'Menu item “'.$menuItem->name.'” updated.');
@@ -93,11 +108,31 @@ class MenuItemController extends Controller
         ));
     }
 
+    public function destroy(MenuItem $menuItem): RedirectResponse
+    {
+        $menuItem->delete();
+
+        return redirect()->route('admin.menu.items.index')
+            ->with('status', 'Menu item “'.$menuItem->name.'” was removed from the customer menu. Historical records were preserved.');
+    }
+
     /**
      * @return Collection<int, MenuCategory>
      */
-    private function categories()
+    private function categories(): Collection
     {
         return MenuCategory::orderBy('sort_order')->orderBy('name')->get();
+    }
+
+    private function storeImage(UploadedFile $image): string
+    {
+        return $image->store('menu', 'public');
+    }
+
+    private function deleteMenuImage(?string $path): void
+    {
+        if ($path !== null && str_starts_with($path, 'menu/')) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

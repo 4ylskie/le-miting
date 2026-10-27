@@ -2,74 +2,77 @@
 
 @php
     $links = [
-        ['name' => 'home', 'label' => 'Home'],
-        ['name' => 'menu.index', 'label' => 'Menu'],
-        ['name' => 'reservation.create', 'label' => 'Reserve'],
-        ['name' => 'ai.recommendations', 'label' => 'Rasa AI'],
-        ['name' => 'contact.create', 'label' => 'Contact Us'],
+        ['name' => 'menu.index', 'active' => 'menu.*', 'label' => 'Menu'],
+        ['name' => 'reservation.create', 'active' => 'reservation.*', 'label' => 'Reserve'],
+        ['name' => 'ai.recommendations', 'active' => 'ai.recommendations*', 'label' => 'Rasa AI'],
+        ['name' => 'contact.create', 'active' => 'contact.*', 'label' => 'Contact'],
     ];
-    $current = request()->route() ? request()->route()->getName() : '';
+    $cartCount = \App\Http\Controllers\CartController::count();
 @endphp
 
-<header class="sticky top-0 z-40 bg-surface/95 backdrop-blur border-b border-brand-100">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="flex h-16 items-center justify-between">
-            <a href="{{ route('home') }}" class="flex items-center gap-2">
-                <span class="text-2xl" aria-hidden="true">🍜</span>
-                <span class="text-xl font-bold tracking-tight text-brand-800">Le Miting</span>
+<header
+    {{ $attributes->class(['sticky top-0 z-40 border-b border-line bg-bone text-espresso']) }}
+    data-customer-nav
+>
+    <div class="lm-container">
+        <div class="flex min-h-20 flex-wrap items-center justify-between gap-x-(--lm-space-sm) gap-y-(--lm-space-xs) py-(--lm-space-xs)">
+            <a
+                href="{{ route('home') }}"
+                class="inline-flex min-h-(--lm-touch) shrink-0 items-center"
+                @if (request()->routeIs('home')) aria-current="page" @endif
+            >
+                <x-brand-logo size="md" variant="customer" />
             </a>
 
-            <nav class="hidden md:flex items-center gap-1" aria-label="Main navigation">
+            <nav class="ml-auto hidden items-center gap-(--lm-space-lg) lg:flex" aria-label="Main navigation">
                 @foreach ($links as $link)
-                    @php $isActive = $current === $link['name']; @endphp
                     <a
                         href="{{ route($link['name']) }}"
-                        class="rounded-md px-3 py-2 text-sm font-medium {{ $isActive ? 'text-brand-800 bg-brand-50' : 'text-text-muted hover:text-brand-700 hover:bg-brand-50' }}"
-                        @if ($isActive) aria-current="page" @endif
+                        class="lm-meta inline-flex min-h-(--lm-touch) min-w-(--lm-touch) items-center underline-offset-8 hover:underline aria-[current=page]:underline"
+                        @if (request()->routeIs($link['active'])) aria-current="page" @endif
                     >
                         {{ $link['label'] }}
                     </a>
                 @endforeach
             </nav>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-(--lm-space-xs) lg:ml-(--lm-space-sm)">
                 <a
                     href="{{ route('cart.index') }}"
-                    class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                    class="lm-meta inline-flex min-h-(--lm-touch) items-center gap-1 px-2 underline-offset-8 hover:underline aria-[current=page]:underline"
+                    @if (request()->routeIs('cart.*')) aria-current="page" @endif
                 >
-                    🛒 Cart
-                    <span class="text-xs text-text-muted" id="cart-count">
-                        @if (\App\Http\Controllers\CartController::count() > 0)
-                            ({{ \App\Http\Controllers\CartController::count() }})
+                    Cart
+                    <span id="cart-count">
+                        @if ($cartCount > 0)
+                            ({{ $cartCount }})
                         @endif
                     </span>
                 </a>
 
                 <button
                     type="button"
-                    class="md:hidden inline-flex items-center justify-center rounded-md p-2 text-text-muted hover:bg-brand-50"
+                    id="mobile-menu-toggle"
+                    class="lm-button lm-button--quiet lg:hidden"
                     aria-label="Toggle navigation menu"
                     aria-expanded="false"
-                    onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
+                    aria-controls="mobile-menu"
                 >
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+                    Menu
                 </button>
             </div>
         </div>
 
-        <div id="mobile-menu" class="hidden md:hidden pb-3" role="navigation" aria-label="Mobile navigation">
+        <nav id="mobile-menu" class="hidden max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-line py-(--lm-space-sm) lg:hidden" aria-label="Mobile navigation">
             @foreach ($links as $link)
-                @php $isActive = $current === $link['name']; @endphp
                 <a
                     href="{{ route($link['name']) }}"
-                    class="block rounded-md px-3 py-2 text-base font-medium {{ $isActive ? 'text-brand-800 bg-brand-50' : 'text-text-muted hover:text-brand-700 hover:bg-brand-50' }}"
-                    @if ($isActive) aria-current="page" @endif
+                    class="lm-body flex min-h-(--lm-touch) items-center py-(--lm-space-xs) underline-offset-8 hover:underline aria-[current=page]:underline"
+                    @if (request()->routeIs($link['active'])) aria-current="page" @endif
                 >
                     {{ $link['label'] }}
                 </a>
             @endforeach
-        </div>
+        </nav>
     </div>
 </header>
