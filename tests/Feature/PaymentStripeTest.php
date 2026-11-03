@@ -101,6 +101,39 @@ test('customer checkout creates a MYR Stripe session in sen and redirects to the
         && str_contains($request['cancel_url'], 'cancelled=1'));
 });
 
+test('Stripe redirects return to the current local or tunnel origin', function (string $requestOrigin, array $headers, string $expectedOrigin) {
+    $payment = stripePendingPayment();
+    Http::fake(['https://api.stripe.com/v1/checkout/sessions' => Http::response([
+        'id' => 'cs_test_checkout', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_checkout',
+    ])]);
+
+    $this->withHeaders($headers)->get($requestOrigin.'/payment/'.$payment->id)
+        ->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_checkout');
+
+    Http::assertSent(fn (Request $request): bool => $request['success_url']
+        === $expectedOrigin.'/payment/stripe/return?reference='.$payment->provider_reference.'&session_id={CHECKOUT_SESSION_ID}'
+        && $request['cancel_url']
+        === $expectedOrigin.'/payment/stripe/return?reference='.$payment->provider_reference.'&cancelled=1');
+})->with([
+    'local HTTP' => ['http://fyp.test', [], 'http://fyp.test'],
+    'public HTTPS' => ['https://lemiting.me', [], 'https://lemiting.me'],
+    'Cloudflare forwarded HTTPS' => ['http://fyp.test', [
+        'X-Forwarded-Host' => 'lemiting.me',
+        'X-Forwarded-Proto' => 'https',
+        'X-Forwarded-Port' => '443',
+    ], 'https://lemiting.me'],
+]);
+
+test('Stripe returns are forbidden when a legacy driver is selected', function (string $driver) {
+    config(['payment.driver' => $driver]);
+    $payment = stripePendingPayment();
+
+    $this->get(stripeReturnUrl($payment))->assertForbidden();
+
+    $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending', 'paid_at' => null]);
+    Http::assertNothingSent();
+})->with(['mock', 'fiuu']);
+
 test('a verified paid Stripe return confirms the order clears its cart and sends one confirmation', function () {
     Mail::fake();
     $payment = stripePendingPayment();

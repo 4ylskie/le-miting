@@ -53,9 +53,9 @@ class StripePaymentService implements PaymentProcessor
                         ],
                         'quantity' => 1,
                     ]],
-                    'success_url' => route('payment.stripe.return', ['reference' => $payment->provider_reference])
+                    'success_url' => url()->route('payment.stripe.return', ['reference' => $payment->provider_reference])
                         .'&session_id={CHECKOUT_SESSION_ID}',
-                    'cancel_url' => route('payment.stripe.return', ['reference' => $payment->provider_reference, 'cancelled' => 1]),
+                    'cancel_url' => url()->route('payment.stripe.return', ['reference' => $payment->provider_reference, 'cancelled' => 1]),
                 ])->throw()->json();
 
             if (! is_array($session)
