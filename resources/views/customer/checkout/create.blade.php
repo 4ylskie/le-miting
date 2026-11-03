@@ -71,7 +71,7 @@
                         <dd class="tabular-nums">RM {{ number_format($total, 2) }}</dd>
                     </div>
                 </dl>
-                <p class="lm-meta lm-muted">Continue to the payment page to complete your order.</p>
+                <x-stripe-payment-info />
                 <button type="submit" class="lm-button w-full">Proceed to Payment</button>
                 <a href="{{ route('cart.index') }}" class="lm-button lm-button--quiet self-start">Back to cart</a>
             </aside>

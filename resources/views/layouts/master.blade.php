@@ -20,7 +20,7 @@
 
     <x-customer-nav />
 
-    <main id="main-content" tabindex="-1" class="min-w-0 flex-1 scroll-mt-24">
+    <main id="main-content" tabindex="-1" class="min-w-0 flex-1 scroll-mt-44 sm:scroll-mt-32 lg:scroll-mt-24">
         @yield('content')
     </main>
 

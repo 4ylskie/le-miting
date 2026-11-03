@@ -142,7 +142,7 @@
                         @method('PATCH')
                         <input type="hidden" name="expected_status" value="{{ $reservation->status }}">
                         <label for="status" class="block text-sm font-medium text-text">Move reservation to</label>
-                        <div class="flex gap-2">
+                        <div class="flex flex-col gap-2 sm:flex-row">
                             <select id="status" name="status" class="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text" @if ($errors->has('status')) aria-invalid="true" aria-describedby="reservation-status-error" @endif>
                                 @foreach ($nextStatuses as $transitionStatus)
                                     <option value="{{ $transitionStatus }}" @selected(old('status') === $transitionStatus)>{{ ucfirst($transitionStatus) }}</option>
@@ -173,7 +173,7 @@
                             <input type="hidden" name="expected_table_id" value="{{ $reservation->table_id }}">
                             <input type="hidden" name="expected_status" value="{{ $reservation->status }}">
                             <label for="table_id" class="block text-sm font-medium text-text">Move to</label>
-                            <div class="flex gap-2">
+                            <div class="flex flex-col gap-2 sm:flex-row">
                                 <select id="table_id" name="table_id" class="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text" @if ($errors->has('table_id')) aria-invalid="true" aria-describedby="reservation-table-error" @endif>
                                     @foreach ($availableTables as $table)
                                         <option value="{{ $table->id }}" @selected((string) old('table_id') === (string) $table->id)>Table {{ $table->table_number }} (seats {{ $table->capacity }})</option>

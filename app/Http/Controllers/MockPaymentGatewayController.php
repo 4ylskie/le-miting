@@ -40,6 +40,11 @@ class MockPaymentGatewayController extends Controller
 
     private function ensureEligible(Payment $payment): void
     {
-        abort_unless(config('payment.driver') === 'mock' && $payment->status === 'pending', 404);
+        $stripeSimulator = config('payment.driver') === 'stripe'
+            && trim((string) config('services.stripe.secret')) === ''
+            && $payment->provider === 'stripe'
+            && ($payment->raw_response['simulator'] ?? false) === true;
+
+        abort_unless((config('payment.driver') === 'mock' || $stripeSimulator) && $payment->status === 'pending', 404);
     }
 }

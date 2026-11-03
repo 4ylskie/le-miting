@@ -11,6 +11,7 @@ use App\Services\DevelopmentDatabaseGuard;
 use App\Services\Payments\FiuuPaymentService;
 use App\Services\Payments\MockPaymentService;
 use App\Services\Payments\PaymentProcessor;
+use App\Services\Payments\StripePaymentService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Console\Kernel;
@@ -28,9 +29,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(PaymentProcessor::class, function () {
-            return config('payment.driver') === 'fiuu'
-                ? new FiuuPaymentService
-                : new MockPaymentService;
+            return match (config('payment.driver')) {
+                'stripe' => $this->app->make(StripePaymentService::class),
+                'fiuu' => new FiuuPaymentService,
+                default => new MockPaymentService,
+            };
         });
 
         $this->app->singleton(AiRecommender::class, function () {

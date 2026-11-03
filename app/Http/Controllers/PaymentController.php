@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StripePaymentReturnRequest;
 use App\Models\Payment;
 use App\Services\CartService;
 use App\Services\PaymentRetryService;
@@ -9,6 +10,7 @@ use App\Services\Payments\PaymentProcessor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -59,12 +61,45 @@ class PaymentController extends Controller
         ]);
     }
 
+    public function stripeReturn(StripePaymentReturnRequest $request): View|RedirectResponse
+    {
+        $payment = Payment::where('provider', 'stripe')
+            ->where('provider_reference', $request->validated('reference'))->first();
+
+        if (! $payment) {
+            return view('errors.invalid-link');
+        }
+
+        try {
+            $payment = $this->payments->verify($request->validated());
+        } catch (\Throwable) {
+            Log::warning('Stripe Checkout verification failed.');
+
+            return redirect()->route('payment.failed', $payment)
+                ->withErrors(['payment' => 'We could not verify this Stripe payment. Please check again before making another payment.']);
+        }
+
+        if ($payment->status === 'paid') {
+            return $this->return($request);
+        }
+
+        if ($payment->status === 'failed' || $request->boolean('cancelled')) {
+            return redirect()->route('payment.failed', $payment);
+        }
+
+        return view('customer.payment.return', ['payment' => $payment]);
+    }
+
     public function callback(Request $request): JsonResponse|RedirectResponse
     {
         try {
             $payment = $this->payments->verify($request->all());
         } catch (\Throwable $e) {
-            report($e);
+            if (config('payment.driver') === 'stripe') {
+                Log::warning('Stripe Checkout verification failed.');
+            } else {
+                report($e);
+            }
 
             if (config('payment.driver') === 'mock' && $request->input('status') === 'failed') {
                 return redirect()->route('payment.failed');

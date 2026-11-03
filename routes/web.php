@@ -66,6 +66,7 @@ Route::get('/reservation/{reservation}/receipt', [ReservationController::class, 
 Route::get('/mock-payment/{payment}', [MockPaymentGatewayController::class, 'show'])->middleware('signed')->name('mock-payment.show');
 Route::post('/mock-payment/{payment}', [MockPaymentGatewayController::class, 'process'])->middleware('signed')->name('mock-payment.process');
 Route::get('/payment/return', [PaymentController::class, 'return'])->name('payment.return');
+Route::get('/payment/stripe/return', [PaymentController::class, 'stripeReturn'])->name('payment.stripe.return');
 Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/failed/{payment?}', [PaymentController::class, 'failed'])->name('payment.failed');
 Route::post('/payment/{payment}/retry', [PaymentController::class, 'retry'])->name('payment.retry');

@@ -12,9 +12,9 @@ return [
     |
     */
 
-    'driver' => env('AI_DRIVER', 'mock'),
+    'driver' => env('AI_PROVIDER', env('AI_DRIVER', 'mock')),
 
-    'model' => env('AI_MODEL', 'gpt-4o-mini'),
+    'model' => env('OPENAI_MODEL', env('AI_MODEL', 'gpt-4.1')),
 
     'max_recommendations' => 3,
 

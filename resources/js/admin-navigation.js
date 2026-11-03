@@ -28,6 +28,21 @@ if (shell) {
     });
 
     closer.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('keydown', (event) => {
+        if (event.key !== 'Tab') {
+            return;
+        }
+        const controls = [...dialog.querySelectorAll('a[href], button:not(:disabled)')];
+        const first = controls[0];
+        const last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
     dialog.addEventListener('close', () => {
         opener.setAttribute('aria-expanded', 'false');
         document.body.style.overflow = '';

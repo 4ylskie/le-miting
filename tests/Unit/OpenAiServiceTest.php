@@ -40,7 +40,7 @@ test('it retains only integer IDs from the supplied menu items', function () {
     expect($ids)->toBe([2]);
 });
 
-test('it rejects malformed OpenAI recommendation output', function (string $content, string $finishReason) {
+test('malformed OpenAI output falls back to deterministic eligible recommendations', function (string $content, string $finishReason) {
     OpenAI::fake([
         CreateResponse::fake([
             'choices' => [[
@@ -50,8 +50,7 @@ test('it rejects malformed OpenAI recommendation output', function (string $cont
         ]),
     ]);
 
-    expect(fn () => (new OpenAiService)->recommend([openAiMenuItem(1)], []))
-        ->toThrow(RuntimeException::class);
+    expect((new OpenAiService)->recommend([openAiMenuItem(1)], []))->toBe([1]);
 })->with([
     'missing IDs' => ['{"unexpected":"response"}', 'stop'],
     'invalid JSON' => ['not JSON', 'stop'],
@@ -59,6 +58,9 @@ test('it rejects malformed OpenAI recommendation output', function (string $cont
     'untrusted extra claims' => ['{"recommended_item_ids":[1],"allergy_safe":true}', 'stop'],
     'truncated response' => ['{"recommended_item_ids":[1]}', 'length'],
     'refusal' => ['null', 'content_filter'],
+    'empty IDs' => ['{"recommended_item_ids":[]}', 'stop'],
+    'invented IDs' => ['{"recommended_item_ids":[999]}', 'stop'],
+    'string IDs' => ['{"recommended_item_ids":["1"]}', 'stop'],
 ]);
 
 test('OpenAI cannot return more than three candidates even if configuration is raised', function () {

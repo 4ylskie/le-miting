@@ -194,10 +194,6 @@ class AiRecommendationOptions
             $result['priceOperator'] = in_array($budgets[0][1], ['under', 'below', 'less than'], true) ? '<' : '<=';
         }
 
-        if ($result['preferences'] === [] && $result['maxPrice'] === null && $result['excludedAllergens'] === []) {
-            return [...$result, 'notice' => 'We could not match that wording to verified menu attributes. Please try the listed preferences or browse the menu.', 'blocked' => true];
-        }
-
         if (($result['preferences']['dietary_type'] ?? null) === 'vegetarian'
             && in_array($result['preferences']['protein_type'] ?? null, ['chicken', 'beef', 'seafood'], true)) {
             return [...$result, 'notice' => 'Vegetarian and meat or seafood preferences conflict. Please adjust your request.', 'blocked' => true];
@@ -224,7 +220,7 @@ class AiRecommendationOptions
             $unresolved = preg_replace($this->allergenAliasPatterns($result['excludedAllergens']), ' ', $unresolved) ?? $unresolved;
             $unresolved = preg_replace(self::ALLERGY_TERM_PATTERN, ' ', $unresolved) ?? $unresolved;
         }
-        $unresolved = preg_replace('/\b(?:i would like|i want|i would prefer|can i have|could i have|find|recommend|looking for|for me|per dish|please|something|some|a|an|the|food|dishes|dish|and|with|that|which|is|are)\b/u', ' ', $unresolved);
+        $unresolved = preg_replace('/\b(?:i would like|i want|i would prefer|can i have|could i have|what do you recommend|what would you recommend|what should i eat|what is your|do you have|can you|could you|would you|looking for|for me|per dish|for dinner|for lunch|for breakfast|makan malam|makan tengah hari|sarapan|find|recommendations?|recommend|suggest|suggestions?|please|something|some|anything|good|nice|delicious|tasty|signature|popular|favourite|favorite|best|cadangkan|cadangan|syorkan|makanan|hidangan|sedap|enak|istimewa|tolong|sila|saya|nak|ingin|mahu|makan|sesuatu|yang|untuk|apa|apakah|paling|boleh|bolehkah|anda|a|an|the|food|dishes|dish|and|with|that|which|is|are|me)\b/u', ' ', $unresolved);
         if ($result['excludedAllergens'] !== []) {
             $unresolved = preg_replace('/\b(?:i|have|want|would|like|prefer|looking|to|no|without|avoid|exclude|free|from|and|or|elak|elakkan|tanpa|saya|tidak|tak|boleh|nak)\b/u', ' ', $unresolved) ?? $unresolved;
         }

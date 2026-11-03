@@ -10,4 +10,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | app/Mail/** | .ai/rules/mail.md |
 | app/Models/** | .ai/rules/models.md |
+| app/Services/Payments/** | .ai/rules/payments.md |
 | routes/web.php | .ai/rules/routes.md |

@@ -110,6 +110,59 @@
     color: #7E826D;
 }
 
+@media (max-width: 63.999rem) {
+    .lm-customer-nav .lm-brand-lockup--customer {
+        --lm-brand-mark-h: 1.75rem;
+        --lm-brand-text-size: 1.25rem;
+        --lm-brand-gap: 0.35rem;
+    }
+}
+
+@layer components {
+    .lm-customer-nav__quick-links {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.125rem;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .lm-customer-nav__brand { flex-shrink: 0; }
+    .lm-customer-nav__dialog { background: #201612; color: #FAF6F0; }
+
+    @media (min-width: 40rem) {
+        .lm-customer-nav__quick-links { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    }
+
+    .lm-customer-nav__quick-links a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: var(--lm-touch);
+        padding-inline: 0.25rem;
+        font-size: var(--text-lm-meta);
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 63.999rem) {
+        .lm-featured-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+        .lm-featured-grid .lm-featured-dish { min-width: 0; min-height: 28rem; align-items: flex-end; }
+        .lm-featured-grid .lm-h1 { font-size: clamp(2rem, 4vw, 3rem); }
+    }
+
+    @media (min-width: 48rem) and (max-width: 63.999rem) {
+        .lm-featured-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 39.999rem) {
+        .lm-welcome__copy > .lm-actions { width: 100%; flex-direction: column; align-items: stretch; }
+    }
+}
+
 /* Keep the foundation available before later checkpoints adopt its classes. */
 @theme static {
     --font-display: 'DM Serif Display', Georgia, ui-sans-serif, system-ui, sans-serif;
@@ -291,6 +344,19 @@
 
     .lm-admin .overflow-x-auto {
         contain: paint;
+    }
+
+    .lm-admin #admin-main :is(section, aside, form, .grid > *, dl > *) { min-width: 0; }
+    .lm-admin #admin-main :is(dd, h2, p, li) { overflow-wrap: anywhere; }
+    .lm-admin #admin-main :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+        min-width: 0;
+        max-width: 100%;
+    }
+    .lm-admin #admin-main .overflow-x-auto { max-width: 100%; }
+
+    @media (max-width: 39.999rem) {
+        .lm-admin #admin-main form[method='GET'] { width: 100%; flex-direction: column; align-items: stretch; }
+        .lm-admin #admin-main form[method='GET'] :is(input, select, button) { width: 100%; }
     }
 
     .lm-admin :is(button, input:not([type='hidden']):not([type='checkbox']), select),

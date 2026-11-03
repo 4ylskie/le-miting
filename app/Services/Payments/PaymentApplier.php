@@ -66,7 +66,7 @@ class PaymentApplier
     private function verifiedAttributes(array $data): array
     {
         $attributes = [
-            'provider' => 'fiuu',
+            'provider' => $data['provider'] ?? 'fiuu',
             'status' => 'paid',
             'paid_at' => now(),
         ];
@@ -87,7 +87,7 @@ class PaymentApplier
     private function failedAttributes(array $data): array
     {
         $attributes = [
-            'provider' => 'fiuu',
+            'provider' => $data['provider'] ?? 'fiuu',
             'status' => 'failed',
         ];
 

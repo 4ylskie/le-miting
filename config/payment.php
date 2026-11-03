@@ -7,12 +7,13 @@ return [
     | Payment driver
     |--------------------------------------------------------------------------
     |
-    | 'mock' uses the local simulated FIUU gateway (development default).
+    | 'stripe' uses Stripe Checkout or the local test simulator without a key.
+    | 'mock' retains the local simulated payment gateway for existing tests.
     | 'fiuu' uses the real FIUU hosted payment page.
     |
     */
 
-    'driver' => env('PAYMENT_DRIVER', 'mock'),
+    'driver' => env('PAYMENT_DRIVER', 'stripe'),
 
     'hold_minutes' => 15,
 

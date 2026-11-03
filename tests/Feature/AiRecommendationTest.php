@@ -62,6 +62,78 @@ test('recommendations require a text request', function () {
         ->assertSessionHasErrors('preferences_text');
 });
 
+test('conversational English and Malay requests return available menu recommendations', function (string $text) {
+    config(['ai.driver' => 'mock']);
+    $item = MenuItem::factory()->create();
+    MenuItem::factory()->unavailable()->create();
+    MenuItem::factory()->for(MenuCategory::factory()->create(['is_active' => false]), 'category')->create();
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => $text])
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items) => $items->pluck('id')->all() === [$item->id]);
+})->with([
+    'what is your signature dish',
+    'recommend something good for dinner',
+    'what do you recommend',
+    'cadangkan makanan sedap',
+    'apa makanan paling popular',
+    'saya nak makan sesuatu yang sedap untuk makan malam',
+    'boleh tolong syorkan hidangan yang sedap untuk saya',
+    'apakah hidangan istimewa anda',
+    'saya ingin makan makanan yang enak untuk makan tengah hari',
+    'what would you recommend for dinner',
+    'what should I eat for lunch',
+    'could you recommend me something tasty please',
+    'could you suggest something delicious for lunch please',
+]);
+
+test('OpenAI fallback preserves every supported allergen exclusion and current assessment', function (string $code) {
+    $category = MenuCategory::factory()->create(['name' => 'Main Course']);
+    $eligible = MenuItem::factory()->for($category, 'category')->create(['name' => 'Steamed rice', 'description' => 'Rice and water.']);
+    $blocked = MenuItem::factory()->for($category, 'category')->create(['name' => 'Unverified dish', 'description' => 'Recipe under review.']);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $service = app(MenuAllergenAssessmentService::class);
+    $service->save($blocked, Allergen::where('code', $code)->firstOrFail(), $admin, [
+        'recipe_status' => 'unknown', 'cross_contact_status' => 'unknown',
+        'evidence' => 'Synthetic test record; ingredients have not been reviewed.',
+        'context' => $service->context($blocked, null),
+    ]);
+    $history = [];
+    fakeRasaOpenAiHttp([], $history);
+    config(['openai.api_key' => null]);
+
+    $this->post(route('ai.recommendations.recommend'), [
+        'preferences_text' => 'recommend something good for dinner', 'excluded_allergens' => [$code],
+    ])->assertOk()
+        ->assertViewHas('recommendations', fn ($items) => $items->pluck('id')->all() === [$eligible->id])
+        ->assertViewHas('excludedAllergens', fn ($allergens) => $allergens->pluck('code')->all() === [$code]);
+
+    expect($history)->toBeEmpty();
+})->with(Allergen::CODES);
+
+test('configured OpenAI models rank conversational English and Malay requests', function (string $model, string $text) {
+    $first = MenuItem::factory()->create();
+    $preferred = MenuItem::factory()->create();
+    config(['ai.model' => $model]);
+    $history = [];
+    fakeRasaOpenAiHttp([new Response(200, ['Content-Type' => 'application/json'], json_encode(CreateResponse::fake([
+        'choices' => [['message' => ['content' => json_encode(['recommended_item_ids' => [$preferred->id, $first->id]])]]],
+    ])->toArray()))], $history);
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => $text])
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items) => $items->pluck('id')->all() === [$preferred->id, $first->id]);
+
+    expect($history)->toHaveCount(1);
+    $body = json_decode((string) $history[0]['request']->getBody(), true, flags: JSON_THROW_ON_ERROR);
+    $payload = json_decode($body['messages'][1]['content'], true, flags: JSON_THROW_ON_ERROR);
+    expect($body['model'])->toBe($model);
+    expect($payload['preferences']['preferences_text'])->toBe($text);
+})->with(['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o'])->with([
+    'English' => 'what is your signature dish',
+    'Bahasa Malaysia' => 'saya nak makan sesuatu yang sedap untuk makan malam',
+]);
+
 test('the landing page links to the Rasa AI page', function () {
     $this->seed(DatabaseSeeder::class);
 
@@ -176,30 +248,30 @@ test('recommendations exclude invalid unavailable deleted and out of category it
     expect($response->viewData('recommendations')->pluck('id')->all())->toBe([$recommended->id]);
 });
 
-test('a provider timeout returns a graceful recommendation failure', function () {
+test('a provider timeout returns deterministic matching recommendations', function () {
     config()->set('ai.driver', 'openai');
     config()->set('openai.api_key', 'test-only-not-a-real-key');
     OpenAI::fake([new RuntimeException('OpenAI request timed out')]);
     $this->seed(DatabaseSeeder::class);
 
     $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'chicken'])
-        ->assertRedirect()
-        ->assertSessionHas('error', 'Rasa AI is temporarily unavailable. Please try again or browse the menu directly.');
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items) => $items->isNotEmpty() && $items->every(fn ($item) => $item->protein_type === 'chicken'));
 });
 
-test('a provider API exception returns a graceful recommendation failure', function () {
+test('a provider API exception returns matching dishes without exposing the error', function () {
     config()->set('ai.driver', 'openai');
     config()->set('openai.api_key', 'test-only-not-a-real-key');
     OpenAI::fake([new RuntimeException('OpenAI API failure')]);
     $this->seed(DatabaseSeeder::class);
 
     $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'chicken'])
-        ->assertRedirect()
-        ->assertSessionHas('error', 'Rasa AI is temporarily unavailable. Please try again or browse the menu directly.')
-        ->assertSessionMissing('OpenAI API failure');
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items) => $items->isNotEmpty() && $items->every(fn ($item) => $item->protein_type === 'chicken'))
+        ->assertDontSee('OpenAI API failure');
 });
 
-test('malformed OpenAI output returns a graceful recommendation failure', function () {
+test('malformed OpenAI output returns deterministic matching recommendations', function () {
     config()->set('ai.driver', 'openai');
     config()->set('openai.api_key', 'test-only-not-a-real-key');
     OpenAI::fake([
@@ -212,8 +284,8 @@ test('malformed OpenAI output returns a graceful recommendation failure', functi
     $this->seed(DatabaseSeeder::class);
 
     $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'chicken'])
-        ->assertRedirect()
-        ->assertSessionHas('error', 'Rasa AI is temporarily unavailable. Please try again or browse the menu directly.');
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items) => $items->isNotEmpty() && $items->every(fn ($item) => $item->protein_type === 'chicken'));
 });
 
 test('an empty valid recommendation result renders a helpful empty state', function () {
@@ -728,8 +800,13 @@ test('OpenAI HTTP requests receive bounded text and eligible database candidates
     expect(array_keys($payload['candidates'][0]))->toBe([
         'id', 'name', 'category', 'price', 'spice_level', 'protein_type', 'dietary_type', 'flavor_profile',
     ]);
-    expect($body['response_format'])->toBe(['type' => 'json_object']);
-    expect($history[0]['options']['timeout'])->toBe(30);
+    expect($body['response_format']['type'])->toBe('json_schema');
+    expect($body['response_format']['json_schema']['strict'])->toBeTrue();
+    expect($body['response_format']['json_schema']['schema']['additionalProperties'])->toBeFalse();
+    expect($body['response_format']['json_schema']['schema']['properties']['recommended_item_ids']['items'])
+        ->toBe(['type' => 'integer', 'enum' => [$matching->id]]);
+    expect($body['max_completion_tokens'])->toBe(128);
+    expect($history[0]['options']['timeout'])->toBe(8);
     $response->assertDontSee('test-only-not-a-real-key');
 });
 
@@ -772,8 +849,10 @@ test('unsafe text is blocked before OpenAI HTTP requests', function (string $tex
     'unsupported' => ['vegan'],
 ]);
 
-test('OpenAI HTTP failures expose only a safe fallback and sanitized log', function (string $failure) {
-    MenuItem::factory()->create();
+test('OpenAI HTTP failures return eligible fallback dishes and a sanitized log', function (string $failure) {
+    $item = MenuItem::factory()->create(['price' => 12.00, 'protein_type' => 'chicken']);
+    MenuItem::factory()->create(['price' => 12.00, 'protein_type' => 'beef']);
+    MenuItem::factory()->create(['price' => 25.00, 'protein_type' => 'chicken']);
     $history = [];
     $sensitive = 'test-only-sensitive-provider-error';
     $fakeResponse = match ($failure) {
@@ -786,25 +865,24 @@ test('OpenAI HTTP failures expose only a safe fallback and sanitized log', funct
     fakeRasaOpenAiHttp([$fakeResponse], $history);
     Log::shouldReceive('warning')->once()->with('Rasa AI recommendation provider failed.');
 
-    $this->from(route('ai.recommendations'))->followingRedirects()
-        ->post(route('ai.recommendations.recommend'), ['preferences_text' => 'up to RM100'])
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'chicken under RM20'])
         ->assertOk()
-        ->assertSee('Rasa AI is temporarily unavailable.')
+        ->assertViewHas('recommendations', fn ($items) => $items->pluck('id')->all() === [$item->id])
         ->assertDontSee($sensitive)
         ->assertDontSee('test-only-not-a-real-key');
 
     expect($history)->toHaveCount(1);
 })->with(['401', '429', '500', 'timeout', 'malformed']);
 
-test('missing OpenAI credentials fail before any HTTP request', function (?string $key) {
-    MenuItem::factory()->create(['price' => 10.00]);
+test('missing OpenAI credentials use eligible fallback dishes without an HTTP request', function (?string $key) {
+    $item = MenuItem::factory()->create(['price' => 10.00]);
     $history = [];
     fakeRasaOpenAiHttp([], $history);
     config(['openai.api_key' => $key]);
 
     $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'up to RM20'])
-        ->assertRedirect()
-        ->assertSessionHas('error', 'Rasa AI is temporarily unavailable. Please try again or browse the menu directly.');
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items) => $items->pluck('id')->all() === [$item->id]);
 
     expect($history)->toBeEmpty();
 })->with([null, '', '   ']);

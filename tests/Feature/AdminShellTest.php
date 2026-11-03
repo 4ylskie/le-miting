@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Allergen;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Order;
@@ -17,6 +18,21 @@ function adminShellXPath(string $html): DOMXPath
 
     return new DOMXPath($document);
 }
+
+test('allergen assessment pages identify menu items as their owning navigation section', function (string $routeName) {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $item = MenuItem::factory()->create();
+    $parameters = ['menuItem' => $item];
+    if ($routeName === 'admin.menu.allergens.edit') {
+        $parameters['allergen'] = Allergen::query()->firstOrFail();
+    }
+
+    $response = $this->actingAs($admin)->get(route($routeName, $parameters))->assertOk();
+    $xpath = adminShellXPath($response->getContent());
+
+    expect($xpath->query('//nav[@aria-label="Admin navigation"]//a[@aria-current="page"]')->length)->toBe(1);
+    expect($xpath->evaluate('string(//nav[@aria-label="Admin navigation"]//a[@aria-current="page"]/@href)'))->toBe(route('admin.menu.items.index'));
+})->with(['admin.menu.allergens.index', 'admin.menu.allergens.edit']);
 
 test('admin pages retain the shared shell and highlight their owning navigation section', function (string $routeName, string $activeRoute, ?string $modelClass) {
     $admin = User::factory()->create(['role' => 'admin']);

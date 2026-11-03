@@ -66,7 +66,9 @@
                     <ul class="mt-2 space-y-1">
                         @foreach ($section['links'] as $link)
                             @php
-                                $isActive = $current === $link['name'] || (str_ends_with($link['name'], '.index') && str_starts_with($current, substr($link['name'], 0, -5)));
+                                $isActive = $current === $link['name']
+                                    || (str_ends_with($link['name'], '.index') && str_starts_with($current, substr($link['name'], 0, -5)))
+                                    || ($link['name'] === 'admin.menu.items.index' && str_starts_with($current, 'admin.menu.allergens.'));
                             @endphp
                             <li>
                                 <a
@@ -91,12 +93,13 @@
 
         <div class="min-w-0 lg:pl-64">
             <header class="flex min-h-24 flex-wrap items-center justify-between gap-4 border-b border-line bg-ivory px-5 py-5 sm:px-8">
-              <div class="flex min-w-0 items-center gap-4">
+              <div class="flex w-full min-w-0 items-center gap-3 sm:gap-4 lg:w-auto lg:flex-1">
                 <button
                     type="button"
                     hidden
                     data-admin-open
-                    class="min-h-11 border border-line px-3 text-sm lg:hidden"
+                    data-admin-nav-open
+                    class="min-h-11 shrink-0 border border-line px-3 text-sm lg:hidden"
                     aria-label="Open administration navigation"
                     aria-controls="admin-navigation-dialog"
                     aria-expanded="false"

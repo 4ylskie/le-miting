@@ -12,7 +12,11 @@
         <section aria-labelledby="gateway-title" class="lm-stack border-t-4 border-espresso pt-(--lm-space-lg)">
             <header class="lm-stack">
                 <p class="lm-eyebrow">Payment Gateway</p>
-                <h1 id="gateway-title" class="lm-h3">Online Payment</h1>
+                <h1 id="gateway-title" class="lm-h3">Stripe Checkout (MYR){{ config('payment.driver') === 'stripe' ? ' — Test simulator' : '' }}</h1>
+                <x-stripe-payment-info />
+                @if (config('payment.driver') === 'stripe')
+                    <p class="lm-meta lm-muted">This local simulator lets you test success, cancellation, or a declined payment without entering card details.</p>
+                @endif
             </header>
             <dl class="lm-meta grid gap-(--lm-space-md)">
                 <div class="flex justify-between gap-(--lm-space-md)">
@@ -34,9 +38,9 @@
                     <legend class="lm-label pr-(--lm-space-xs)">Choose a payment method</legend>
                     <p id="method-help" class="lm-meta lm-muted mt-(--lm-space-sm)">Select how you would like to pay. Your payment details are handled by the payment provider.</p>
                     <div class="mt-(--lm-space-sm) grid gap-(--lm-space-xs)">
-                        @foreach (['online_banking' => 'Online Banking', 'card' => 'Credit / Debit Card', 'ewallet' => 'E-Wallet'] as $value => $label)
+                        @foreach (config('payment.driver') === 'stripe' ? ['card' => 'Credit / Debit Card'] : ['online_banking' => 'Online Banking', 'card' => 'Credit / Debit Card', 'ewallet' => 'E-Wallet'] as $value => $label)
                             <label for="method-{{ $value }}" class="lm-choice">
-                                <input id="method-{{ $value }}" type="radio" name="payment_method" value="{{ $value }}" @checked(old('payment_method', 'online_banking') === $value) class="lm-radio" aria-describedby="method-help{{ $errors->has('payment_method') ? ' method-error' : '' }}" @if ($errors->has('payment_method')) aria-invalid="true" @endif>
+                                <input id="method-{{ $value }}" type="radio" name="payment_method" value="{{ $value }}" @checked(old('payment_method', config('payment.driver') === 'stripe' ? 'card' : 'online_banking') === $value) class="lm-radio" aria-describedby="method-help{{ $errors->has('payment_method') ? ' method-error' : '' }}" @if ($errors->has('payment_method')) aria-invalid="true" @endif>
                                 <span>{{ $label }}</span>
                             </label>
                         @endforeach
@@ -53,7 +57,7 @@
             </form>
             <form method="POST" action="{{ $processUrl }}">
                 @csrf
-                <input type="hidden" name="payment_method" value="online_banking">
+                <input type="hidden" name="payment_method" value="{{ config('payment.driver') === 'stripe' ? 'card' : 'online_banking' }}">
                 <input type="hidden" name="outcome" value="abandoned">
                 <button type="submit" class="lm-button lm-button--secondary w-full">Cancel and return without paying</button>
             </form>
@@ -62,9 +66,9 @@
                 <p class="lm-meta lm-muted mt-(--lm-space-xs)">If your payment is declined, you can return to checkout and try again.</p>
                 <form method="POST" action="{{ $processUrl }}" class="mt-(--lm-space-xs)">
                     @csrf
-                    <input type="hidden" name="payment_method" value="online_banking">
+                    <input type="hidden" name="payment_method" value="{{ config('payment.driver') === 'stripe' ? 'card' : 'online_banking' }}">
                     <input type="hidden" name="outcome" value="failure">
-                    <button type="submit" class="lm-button lm-button--quiet">Return to checkout</button>
+                    <button type="submit" class="lm-button lm-button--quiet">{{ config('payment.driver') === 'stripe' ? 'Test a declined payment' : 'Return to checkout' }}</button>
                 </form>
             </aside>
         </section>

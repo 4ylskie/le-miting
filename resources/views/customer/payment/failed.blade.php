@@ -5,6 +5,7 @@
 @section('content')
     <section class="lm-container lm-section" aria-labelledby="payment-heading">
         <div class="lm-stack max-w-2xl">
+            <x-stripe-payment-info />
             <p class="lm-status self-start" data-state="{{ $payment?->status === 'paid' ? 'success' : 'failed' }}">{{ $payment?->status === 'paid' ? 'Paid' : 'Payment not completed' }}</p>
             <h1 id="payment-heading" class="lm-h1">{{ $payment?->status === 'paid' ? 'Payment already verified' : 'Payment not completed' }}</h1>
             <p class="lm-body lm-muted">
@@ -33,6 +34,8 @@
                         @csrf
                         <button type="submit" class="lm-button">Retry Payment</button>
                     </form>
+                @elseif ($payment?->provider === 'stripe' && $payment?->status === 'pending')
+                    <a href="{{ route('payment.create', $payment) }}" class="lm-button">Return to Stripe Checkout</a>
                 @elseif ($payment?->reservation_id !== null)
                     <a href="{{ route('reservation.create') }}" class="lm-button">Reservation options</a>
                 @else

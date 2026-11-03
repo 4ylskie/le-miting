@@ -56,6 +56,8 @@ class MockPaymentService implements PaymentProcessor
             throw new \InvalidArgumentException('Unknown payment reference.');
         }
 
+        $payload['provider'] = $payment->provider === 'stripe' ? 'stripe' : 'fiuu';
+
         if (isset($payload['amount']) && abs((float) $payload['amount'] - (float) $payment->amount) > 0.01) {
             $applier = app(PaymentApplier::class);
 

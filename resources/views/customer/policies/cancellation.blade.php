@@ -56,7 +56,11 @@
                     <h2 id="refund-heading-3-4" class="lm-h2">3.4 Refund Processing Method &amp; Timelines</h2>
                     <ul role="list" class="lm-stack lm-body list-disc pl-6">
                         <li>Approved refunds are credited to the original payment method used for the transaction.</li>
-                        <li><strong>FPX / Online Banking and E-Wallets (via Fiuu):</strong> typically 3 to 5 business days after processing.</li>
+                        @if (config('payment.driver') === 'fiuu')
+                            <li><strong>FPX / Online Banking and E-Wallets (via Fiuu):</strong> typically 3 to 5 business days after processing.</li>
+                        @else
+                            <li>Stripe processes approved refunds to the original payment method. Test-mode transactions do not move real money.</li>
+                        @endif
                         <li><strong>Credit / Debit Cards:</strong> typically 5 to 14 business days after processing. The issuing bank may affect when the credit appears.</li>
                     </ul>
                     <p class="lm-body">For help, use <a class="underline underline-offset-4" href="{{ route('contact.create') }}">Contact</a> and include your order or reservation reference. Do not include payment credentials.</p>

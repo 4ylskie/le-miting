@@ -52,7 +52,7 @@
                     <h2 id="privacy-heading-2-4" class="lm-h2">2.4 Disclosure to Third Parties</h2>
                     <ul role="list" class="lm-stack lm-body list-disc pl-6">
                         <li>Personal data is not sold or rented.</li>
-                        <li>Information may be shared with Fiuu as payment processor and transactional email infrastructure as needed to complete the requested service.</li>
+                        <li>Information may be shared with {{ config('payment.driver') === 'fiuu' ? 'Fiuu' : 'Stripe' }} as payment processor and transactional email infrastructure as needed to complete the requested service. Card details are entered only on the hosted payment page and are not stored by Le Miting.</li>
                         <li>When an AI provider is configured, only anonymized dish identifiers and necessary preference input are sent for recommendations; customer contact details are not included.</li>
                         <li>Information may be disclosed to regulatory or law-enforcement authorities when required by law.</li>
                     </ul>

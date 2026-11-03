@@ -27,31 +27,33 @@
             <header class="lm-container lm-section lm-stack items-start">
                 <h2 id="featured-heading" class="lm-h2 lm-featured-heading">Featured Dishes</h2>
             </header>
-            @foreach ($featuredItems as $item)
-                <article @class(['lm-featured-dish', 'lm-featured-dish--photographic' => (bool) $item->image_path, 'lm-featured-dish--right' => $loop->even]) aria-labelledby="featured-dish-{{ $item->id }}">
-                    @if ($item->image_path)
-                        <figure class="lm-featured-dish__photograph">
-                            <img src="{{ asset('storage/' . $item->image_path) }}" alt="{{ $item->name }}"
-                                width="1200" height="900" loading="lazy" decoding="async">
-                        </figure>
-                    @endif
-                    <div class="lm-container lm-featured-dish__content">
-                        <div class="lm-featured-dish__copy lm-stack">
-                            <div class="flex flex-col gap-(--lm-space-sm) sm:flex-row sm:items-baseline sm:justify-between sm:gap-(--lm-space-md)">
-                                <h3 id="featured-dish-{{ $item->id }}" class="lm-h1 min-w-0 wrap-anywhere">{{ $item->name }}</h3>
-                                <p class="lm-body shrink-0 tabular-nums">RM {{ number_format($item->price, 2) }}</p>
+            <div class="lm-featured-grid">
+                @foreach ($featuredItems as $item)
+                    <article @class(['lm-featured-dish', 'lm-featured-dish--photographic' => (bool) $item->image_path, 'lm-featured-dish--right' => $loop->even]) aria-labelledby="featured-dish-{{ $item->id }}">
+                        @if ($item->image_path)
+                            <figure class="lm-featured-dish__photograph">
+                                <img src="{{ asset('storage/' . $item->image_path) }}" alt="{{ $item->name }}"
+                                    width="1200" height="900" loading="lazy" decoding="async">
+                            </figure>
+                        @endif
+                        <div class="lm-container lm-featured-dish__content">
+                            <div class="lm-featured-dish__copy lm-stack">
+                                <div class="flex flex-col gap-(--lm-space-sm) lg:flex-row lg:items-baseline lg:justify-between lg:gap-(--lm-space-md)">
+                                    <h3 id="featured-dish-{{ $item->id }}" class="lm-h1 min-w-0 wrap-anywhere">{{ $item->name }}</h3>
+                                    <p class="lm-body shrink-0 tabular-nums">RM {{ number_format($item->price, 2) }}</p>
+                                </div>
+                                @if ($item->description)
+                                    <p class="lm-body max-w-md wrap-anywhere">{{ $item->description }}</p>
+                                @endif
+                                <x-menu-metadata :item="$item" />
+                                <a href="{{ route('menu.show', $item) }}" class="lm-button lm-button--quiet self-start">
+                                    View Dish<span class="sr-only">: {{ $item->name }}</span>
+                                </a>
                             </div>
-                            @if ($item->description)
-                                <p class="lm-body max-w-md wrap-anywhere">{{ $item->description }}</p>
-                            @endif
-                            <x-menu-metadata :item="$item" />
-                            <a href="{{ route('menu.show', $item) }}" class="lm-button lm-button--quiet self-start">
-                                View Dish<span class="sr-only">: {{ $item->name }}</span>
-                            </a>
                         </div>
-                    </div>
-                </article>
-            @endforeach
+                    </article>
+                @endforeach
+            </div>
         </section>
     @endif
 

@@ -52,7 +52,7 @@ class CheckoutController extends Controller
 
         $payment = Payment::create([
             'order_id' => $order->id,
-            'provider' => 'fiuu',
+            'provider' => config('payment.driver') === 'stripe' ? 'stripe' : 'fiuu',
             'provider_reference' => 'PAY-'.date('Y').'-'.Str::upper(Str::random(10)),
             'status' => 'pending',
             'amount' => $order->total,

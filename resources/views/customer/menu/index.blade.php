@@ -19,7 +19,7 @@
             </nav>
             <form method="GET" action="{{ route('menu.index') }}" role="search" class="lm-field">
                 <label for="menu-search" class="lm-label">Search menu</label>
-                <div class="flex gap-(--lm-space-xs)">
+                <div class="flex flex-col gap-(--lm-space-xs) sm:flex-row">
                     <input id="menu-search" type="search" name="q" value="{{ request()->input('q') }}" placeholder="Search dishes…" class="lm-control">
                     <button type="submit" class="lm-button">Search</button>
                 </div>

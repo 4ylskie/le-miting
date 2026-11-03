@@ -12,7 +12,7 @@
                 <p class="mt-3 text-sm text-text-muted">
                     Amount: <strong class="text-primary">RM {{ number_format($payment->amount, 2) }}</strong>
                 </p>
-                <p class="mt-2 text-sm text-text-muted">You will be redirected to FIUU to complete payment.</p>
+                <x-stripe-payment-info />
             </div>
         </div>
     </section>

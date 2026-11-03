@@ -156,7 +156,7 @@ class ReservationController extends Controller
 
         $payment = Payment::create([
             'reservation_id' => $reservation->id,
-            'provider' => 'fiuu',
+            'provider' => config('payment.driver') === 'stripe' ? 'stripe' : 'fiuu',
             'provider_reference' => 'PAY-'.date('Y').'-'.Str::upper(Str::random(10)),
             'status' => 'pending',
             'amount' => $reservation->total,

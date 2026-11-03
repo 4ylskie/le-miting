@@ -5,6 +5,7 @@
 @section('content')
     <section class="lm-container lm-section" aria-labelledby="payment-heading">
         <div class="lm-stack max-w-2xl">
+            <x-stripe-payment-info />
             @if ($reservationUnconfirmed ?? false)
                 <p class="lm-status self-start" data-state="pending" role="status">Manual review required</p>
                 <h1 id="payment-heading" class="lm-h1">Payment received, reservation not confirmed</h1>

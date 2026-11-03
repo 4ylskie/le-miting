@@ -42,7 +42,7 @@
                         <li>The site presents a curated menu with prices in Malaysian Ringgit (RM/MYR), subject to the availability and information shown at the time of submission.</li>
                         <li><a class="underline underline-offset-4" href="{{ route('ai.recommendations') }}">Rasa AI Menu Concierge</a> at <code>/ai/recommendations</code> provides menu suggestions from the available menu and selected preferences.</li>
                         <li><a class="underline underline-offset-4" href="{{ route('reservation.create') }}">Reservations</a> start at <code>/reserve</code>; the interactive floor plan supports table selection.</li>
-                        <li>Online payments are processed through Fiuu or the payment provider shown at checkout. An order is confirmed after payment authorization or verification succeeds.</li>
+                        <li>Online payments are processed through {{ config('payment.driver') === 'fiuu' ? 'Fiuu' : 'Stripe Checkout (MYR)' }}. An order is confirmed after payment verification succeeds.</li>
                     </ul>
                 </section>
 

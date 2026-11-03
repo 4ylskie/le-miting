@@ -1,19 +1,49 @@
 (() => {
-    const menuToggle = document.getElementById('mobile-menu-toggle');
-    const mobileMenu = document.getElementById('mobile-menu');
+    const navigationDialog = document.getElementById('customer-nav-dialog');
+    const navigationOpener = document.querySelector('[data-nav-open]');
+    const navigationCloser = navigationDialog?.querySelector('[data-nav-close]');
 
-    if (menuToggle && mobileMenu) {
-        menuToggle.addEventListener('click', () => {
-            const isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
-
-            mobileMenu.classList.toggle('hidden', isExpanded);
-            menuToggle.setAttribute('aria-expanded', String(!isExpanded));
+    if (navigationDialog && navigationOpener && navigationCloser) {
+        const desktop = window.matchMedia('(min-width: 1024px)');
+        navigationOpener.addEventListener('click', () => {
+            navigationDialog.showModal();
+            navigationOpener.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+            navigationCloser.focus();
         });
-
-        menuToggle.closest('[data-customer-nav]')?.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && menuToggle.getAttribute('aria-expanded') === 'true') {
-                menuToggle.click();
-                menuToggle.focus();
+        navigationCloser.addEventListener('click', () => navigationDialog.close());
+        navigationDialog.addEventListener('keydown', (event) => {
+            if (event.key !== 'Tab') {
+                return;
+            }
+            const controls = [...navigationDialog.querySelectorAll('a[href], button:not(:disabled)')];
+            const first = controls[0];
+            const last = controls.at(-1);
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
+        navigationDialog.addEventListener('close', () => {
+            navigationOpener.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+            if (!desktop.matches) {
+                navigationOpener.focus();
+            }
+        });
+        navigationDialog.addEventListener('click', (event) => {
+            const bounds = navigationDialog.getBoundingClientRect();
+            if (event.target === navigationDialog && (event.clientX < bounds.left || event.clientX > bounds.right
+                || event.clientY < bounds.top || event.clientY > bounds.bottom)) {
+                navigationDialog.close();
+            }
+        });
+        desktop.addEventListener('change', () => {
+            if (desktop.matches && navigationDialog.open) {
+                navigationDialog.close();
             }
         });
     }

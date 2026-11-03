@@ -17,17 +17,19 @@ test('customer navigation exposes the existing guest destinations without admin 
     $response = $this->get(route('home'));
     $xpath = customerShellXPath($response->getContent());
 
-    foreach (['Main navigation', 'Mobile navigation'] as $navigation) {
+    foreach (['Main navigation', 'Quick navigation', 'Mobile navigation'] as $navigation) {
         $links = $xpath->query('//nav[@aria-label="'.$navigation.'"]//a/@href');
         $destinations = array_map(fn (DOMAttr $link) => $link->value, iterator_to_array($links));
 
-        expect($destinations)->toBe([
-            route('menu.index'), route('reservation.create'), route('ai.recommendations'), route('contact.create'),
-        ]);
+        $expected = [route('home'), route('menu.index'), route('ai.recommendations'), route('reservation.create'), route('contact.create')];
+        if ($navigation !== 'Main navigation') {
+            $expected[] = route('cart.index');
+        }
+        expect($destinations)->toBe($expected);
     }
 
     expect($xpath->evaluate('string(//header//a[1]/@href)'))->toBe(route('home'));
-    expect($xpath->query('//header//a[@href="'.route('cart.index').'"]')->length)->toBe(1);
+    expect($xpath->query('//header//a[@href="'.route('cart.index').'"]')->length)->toBe(2);
     expect($xpath->query('//header//a[contains(@href, "/admin")]')->length)->toBe(0);
 });
 
@@ -37,7 +39,7 @@ test('menu details identify menu as the current navigation destination', functio
     $response = $this->get(route('menu.show', $item));
     $xpath = customerShellXPath($response->getContent());
 
-    foreach (['Main navigation', 'Mobile navigation'] as $navigation) {
+    foreach (['Main navigation', 'Quick navigation', 'Mobile navigation'] as $navigation) {
         expect($xpath->evaluate('string(//nav[@aria-label="'.$navigation.'"]//a[@aria-current="page"]/@href)'))
             ->toBe(route('menu.index'));
     }
@@ -64,17 +66,16 @@ test('navigation does not invent a count for an empty order cart', function () {
     expect($xpath->evaluate('normalize-space(//*[@id="cart-count"])'))->toBe('');
 });
 
-test('the shell provides a focusable skip target and a connected mobile menu control', function () {
+test('the shell provides a focusable skip target and direct navigation alongside the mobile drawer', function () {
     $response = $this->get(route('home'));
     $xpath = customerShellXPath($response->getContent());
     $target = $xpath->evaluate('string((//body/a)[1]/@href)');
-    $control = $xpath->query('//header//button[@aria-controls]')->item(0);
-
     expect($target)->toBe('#main-content');
     expect($xpath->query('//main[@id="main-content"][@tabindex="-1"]')->length)->toBe(1);
-    expect($control->getAttribute('type'))->toBe('button');
-    expect($control->getAttribute('aria-expanded'))->toBe('false');
-    expect($xpath->query('//nav[@id="'.$control->getAttribute('aria-controls').'"]')->length)->toBe(1);
+    expect($xpath->query('//nav[@aria-label="Quick navigation"]//a')->length)->toBe(6);
+    expect($xpath->query('//header//button[@type="button" and @data-nav-open and @aria-controls="customer-nav-dialog" and @aria-expanded="false"]')->length)->toBe(1);
+    expect($xpath->query('//dialog[@id="customer-nav-dialog"]//button[@type="button" and @data-nav-close]')->length)->toBe(1);
+    expect($xpath->query('//dialog[@id="customer-nav-dialog"]//nav[@id="mobile-menu"]')->length)->toBe(1);
 });
 
 test('the footer replaces repeated customer navigation with policies and copyright', function () {

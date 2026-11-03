@@ -98,7 +98,7 @@
                         @method('PATCH')
                         <input type="hidden" name="expected_status" value="{{ $order->status }}">
                         <label for="status" class="block text-sm font-medium text-text">Move order to</label>
-                        <div class="flex gap-2">
+                        <div class="flex flex-col gap-2 sm:flex-row">
                             <select id="status" name="status" class="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-text" @if ($errors->has('status')) aria-invalid="true" aria-describedby="order-status-error" @endif>
                                 @foreach ($nextStatuses as $transitionStatus)
                                     <option value="{{ $transitionStatus }}" @selected(old('status') === $transitionStatus)>{{ ucfirst($transitionStatus) }}</option>
