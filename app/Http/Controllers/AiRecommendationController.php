@@ -46,7 +46,7 @@ class AiRecommendationController extends Controller
         ]);
 
         $interpreted = $this->options->interpretText($text, $selectedAllergens);
-        $preferences = $interpreted['preferences'];
+        $preferences = [...$interpreted['preferences'], 'preferences_text' => $text ?? ''];
         $excludedAllergens = Allergen::query()
             ->whereIn('code', $interpreted['excludedAllergens'])
             ->orderBy('sort_order')
@@ -73,7 +73,10 @@ class AiRecommendationController extends Controller
             $itemsQuery->where('price', $interpreted['priceOperator'], $interpreted['maxPrice']);
         }
 
-        $items = $this->options->filter($itemsQuery, $preferences)->get();
+        $items = $this->options->filter($itemsQuery, $preferences, includeSoftPreferences: false)->get()
+            ->filter(fn (MenuItem $item): bool => $this->options->matchesHardPreferences(
+                [...$item->getAttributes(), 'category' => $item->category?->slug], $preferences,
+            ))->values();
         if ($interpreted['excludedAllergens'] !== []) {
             $items = $items->filter(fn (MenuItem $item): bool => $this->assessmentService
                 ->isEligibleForAllergenExclusions($item, $interpreted['excludedAllergens']))->values();
@@ -88,6 +91,14 @@ class AiRecommendationController extends Controller
             }
 
             return $this->resultsView(collect(), $preferences, $notice, $interpreted['maxPrice'], $excludedAllergens);
+        }
+
+        $softMatchLevel = $items->max(fn (MenuItem $item): int => $this->options->softMatchLevel($item->getAttributes(), $preferences));
+        $items = $items->filter(fn (MenuItem $item): bool => $this->options->softMatchLevel($item->getAttributes(), $preferences) >= $softMatchLevel)->values();
+        $candidateIds = $items->modelKeys();
+
+        if ($softMatchLevel === 0) {
+            $interpreted['notice'] = 'Not every taste preference matched. The suggestions below keep your other menu filters.';
         }
 
         try {
@@ -116,7 +127,7 @@ class AiRecommendationController extends Controller
 
         $recommendationsQuery = MenuItem::query()
             ->with('category')
-            ->whereIn('id', $ids)
+            ->whereIn('id', array_intersect($ids, $candidateIds))
             ->where('is_available', true)
             ->whereHas('category', fn ($query) => $query->where('is_active', true));
 
@@ -132,7 +143,10 @@ class AiRecommendationController extends Controller
             $recommendationsQuery->where('price', $interpreted['priceOperator'], $interpreted['maxPrice']);
         }
 
-        $recommendations = $this->options->filter($recommendationsQuery, $preferences)->get()
+        $recommendations = $this->options->filter($recommendationsQuery, $preferences, includeSoftPreferences: false)->get()
+            ->filter(fn (MenuItem $item): bool => $this->options->matchesHardPreferences(
+                [...$item->getAttributes(), 'category' => $item->category?->slug], $preferences,
+            ) && $this->options->softMatchLevel($item->getAttributes(), $preferences) >= $softMatchLevel)
             ->filter(fn (MenuItem $item): bool => $this->assessmentService
                 ->isEligibleForAllergenExclusions($item, $interpreted['excludedAllergens']))
             ->sortBy(fn (MenuItem $item) => $orderBy[$item->id] ?? PHP_INT_MAX)

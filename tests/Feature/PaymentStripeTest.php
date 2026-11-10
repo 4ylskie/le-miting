@@ -9,8 +9,10 @@ use App\Models\Reservation;
 use App\Models\Table;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 
@@ -68,6 +70,85 @@ function assertStripeCsp(string $html): void
     expect($xpath->query('//@*[starts-with(translate(name(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "on")]')->length)->toBe(0);
 }
 
+test('a failed checkout retries with the supported Stripe card filter', function () {
+    $payment = stripePendingPayment();
+    $payment->update(['status' => 'failed', 'raw_response' => null]);
+    $originalReference = $payment->provider_reference;
+    Http::fake(['https://api.stripe.com/v1/checkout/sessions' => function (Request $request) {
+        if (array_key_exists('payment_method_types', $request->data())
+            || ($request['allowed_payment_method_types'] ?? null) !== ['card']
+            || ! $request->hasHeader('Stripe-Version', '2026-10-28.endive')) {
+            return Http::response(['error' => [
+                'type' => 'invalid_request_error', 'param' => 'payment_method_types',
+                'message' => 'The payment_method_types parameter is no longer supported.',
+            ]], 400);
+        }
+
+        return Http::response(['id' => 'cs_test_checkout', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_checkout']);
+    }]);
+
+    $this->post(route('payment.retry', $payment))->assertRedirect(route('payment.create', $payment));
+    $this->get(route('payment.create', $payment))->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_checkout');
+
+    $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    expect($payment->refresh()->provider_reference)->not->toBe($originalReference);
+    expect($payment->raw_response)->toBe(['session_id' => 'cs_test_checkout']);
+    expect(Order::count())->toBe(1);
+    expect(Payment::count())->toBe(1);
+    Http::assertSentCount(1);
+});
+
+test('Stripe checkout completes an order on local HTTP and public HTTPS', function (string $origin, array $headers, string $returnOrigin) {
+    Mail::fake();
+    $item = MenuItem::factory()->create(['price' => 12.35]);
+    $createdPayload = [];
+    Http::fake([
+        'https://api.stripe.com/v1/checkout/sessions' => function (Request $request) use (&$createdPayload) {
+            $createdPayload = $request->data();
+            if (array_key_exists('payment_method_types', $createdPayload)
+                || ($createdPayload['allowed_payment_method_types'] ?? null) !== ['card']) {
+                return Http::response(['error' => ['param' => 'payment_method_types']], 400);
+            }
+
+            return Http::response(['id' => 'cs_test_checkout', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_checkout']);
+        },
+        'https://api.stripe.com/v1/checkout/sessions/cs_test_checkout' => function (Request $request) {
+            expect($request->hasHeader('Stripe-Version', '2026-10-28.endive'))->toBeTrue();
+
+            return Http::response(stripeSession(Payment::firstOrFail(), ['amount_total' => 2470]));
+        },
+    ]);
+
+    $this->withHeaders($headers)->withSession(['cart.order.items' => [
+        $item->id => ['menu_item_id' => $item->id, 'quantity' => 2],
+    ]])->post($origin.'/checkout', [
+        'customer_name' => 'Stripe Test Customer', 'customer_email' => 'stripe-test@example.invalid',
+        'customer_phone' => '0123456789', 'order_type' => 'takeaway',
+    ])->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_checkout');
+
+    $payment = Payment::firstOrFail();
+    $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending', 'amount' => '24.70']);
+    expect($createdPayload['success_url'])->toBe($returnOrigin.'/payment/stripe/return?reference='.$payment->provider_reference.'&session_id={CHECKOUT_SESSION_ID}');
+    expect($createdPayload['cancel_url'])->toBe($returnOrigin.'/payment/stripe/return?reference='.$payment->provider_reference.'&cancelled=1');
+
+    $return = $this->get(str_replace('{CHECKOUT_SESSION_ID}', 'cs_test_checkout', $createdPayload['success_url']))
+        ->assertRedirectContains('/orders/'.$payment->order_id.'/confirmation')
+        ->assertSessionMissing('cart.order.items');
+    $confirmation = $this->get($return->headers->get('Location'))->assertOk()->assertSee($payment->order->order_number);
+
+    assertStripeCsp($confirmation->getContent());
+    $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
+    $this->assertDatabaseHas('orders', ['id' => $payment->order_id, 'status' => 'confirmed']);
+    Mail::assertSent(OrderConfirmationMail::class, 1);
+    Http::assertSentCount(2);
+})->with([
+    'local HTTP' => ['http://fyp.test', [], 'http://fyp.test'],
+    'public HTTPS' => ['https://lemiting.me', [], 'https://lemiting.me'],
+    'Cloudflare forwarded HTTPS' => ['http://fyp.test', [
+        'X-Forwarded-Host' => 'lemiting.me', 'X-Forwarded-Proto' => 'https', 'X-Forwarded-Port' => '443',
+    ], 'https://lemiting.me'],
+]);
+
 test('customer checkout creates a MYR Stripe session in sen and redirects to the hosted URL', function () {
     $item = MenuItem::factory()->create(['price' => 12.35]);
     Http::fake(['https://api.stripe.com/v1/checkout/sessions' => Http::response([
@@ -90,8 +171,10 @@ test('customer checkout creates a MYR Stripe session in sen and redirects to the
         && $request->hasHeader('Authorization', 'Bearer sk_test_not_a_real_key')
         && $request->hasHeader('Content-Type', 'application/x-www-form-urlencoded')
         && $request->hasHeader('Idempotency-Key', 'checkout-'.$payment->provider_reference)
+        && $request->hasHeader('Stripe-Version', '2026-10-28.endive')
         && $request['mode'] === 'payment' && $request['currency'] === 'myr'
-        && $request['payment_method_types'] === ['card']
+        && $request['allowed_payment_method_types'] === ['card']
+        && ! array_key_exists('payment_method_types', $request->data())
         && $request['line_items'][0]['price_data']['unit_amount'] === 2470
         && $request['line_items'][0]['price_data']['currency'] === 'myr'
         && $request['client_reference_id'] === $payment->provider_reference
@@ -277,6 +360,33 @@ test('Stripe session creation failures show recovery rather than silently simula
     $this->assertDatabaseHas('payments', ['id' => $payment->id, 'provider' => 'stripe', 'status' => 'failed']);
     $this->assertDatabaseHas('orders', ['id' => $payment->order_id, 'status' => 'pending']);
 })->with(['network', '401', 'malformed', 'untrusted URL']);
+
+test('Stripe creation diagnostics omit credentials and untrusted provider details', function (string $parameter, ?string $expectedParameter) {
+    Log::spy();
+    $payment = stripePendingPayment();
+    Http::fake(['https://api.stripe.com/v1/checkout/sessions' => Http::response([
+        'error' => [
+            'type' => 'invalid_request_error',
+            'param' => $parameter,
+            'message' => 'Sensitive provider detail containing sk_test_not_a_real_key',
+        ],
+    ], 400)]);
+
+    $this->get(route('payment.create', $payment))->assertRedirect(route('payment.failed', $payment));
+
+    Log::shouldHaveReceived('warning')->once()->with('Stripe Checkout could not be started.', [
+        'payment_id' => $payment->id,
+        'failure_type' => RequestException::class,
+        'http_status' => 400,
+        'stripe_parameter' => $expectedParameter,
+    ]);
+    $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'failed']);
+    $this->assertDatabaseHas('orders', ['id' => $payment->order_id, 'status' => 'pending']);
+    Http::assertSentCount(1);
+})->with([
+    'known parameter' => ['payment_method_types', 'payment_method_types'],
+    'untrusted parameter' => ['sk_test_not_a_real_key', null],
+]);
 
 test('Stripe test checkout rejects live keys and unsupported currencies before an HTTP request', function (string $secret, string $currency) {
     $payment = stripePendingPayment();

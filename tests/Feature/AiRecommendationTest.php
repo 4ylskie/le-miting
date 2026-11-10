@@ -22,6 +22,207 @@ use OpenAI\Responses\Chat\CreateResponse;
 
 uses(RefreshDatabase::class);
 
+test('Manglish creamy chicken requests rank Ayam Percik within the hard budget', function (string $text) {
+    $this->seed(DatabaseSeeder::class);
+    config(['ai.driver' => 'mock']);
+
+    $response = $this->post(route('ai.recommendations.recommend'), ['preferences_text' => $text])
+        ->assertOk();
+    $items = $response->viewData('recommendations');
+
+    expect($items)->not->toBeEmpty();
+    expect($items->first()->slug)->toBe('ayam-percik');
+    expect($items->every(fn (MenuItem $item): bool => $item->protein_type === 'chicken'
+        && (float) $item->price <= 20 && $item->is_available && $item->category->is_active))->toBeTrue();
+    expect($items->pluck('slug'))->toContain('ayam-masak-lemak-cili-api');
+})->with([
+    'ayam bawah rm20 dan creamy',
+    'cadangkan lauk ayam bawah rm20 yang berkrim',
+    'nak menu ayam lemak bawah rm20 lah',
+    'ayam creamy under RM20',
+    'ayam creamy bawah rm20.',
+]);
+
+test('bilingual menu fillers preserve the same seafood candidates', function (string $text) {
+    config(['ai.driver' => 'mock']);
+    $fish = MenuItem::factory()->create(['name' => 'Ikan Bakar', 'protein_type' => 'seafood']);
+    $prawns = MenuItem::factory()->create(['name' => 'Sambal Udang', 'protein_type' => 'seafood']);
+    MenuItem::factory()->create(['protein_type' => 'chicken']);
+    MenuItem::factory()->unavailable()->create(['protein_type' => 'seafood']);
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => $text])
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items): bool => $items->pluck('id')->all() === [$fish->id, $prawns->id]);
+})->with([
+    'seafood dishes', 'seafood menu', 'menu makanan laut',
+    'tolong cadangkan senarai makanan laut yang sedap lah',
+    'any seafood on the menu please',
+]);
+
+test('soft attribute intersections can fall back only to hard-valid chicken candidates', function () {
+    config(['ai.driver' => 'mock']);
+    $creamy = MenuItem::factory()->create([
+        'protein_type' => 'chicken', 'price' => 18, 'flavor_profile' => 'creamy', 'spice_level' => 'hot',
+    ]);
+    $mild = MenuItem::factory()->create([
+        'protein_type' => 'chicken', 'price' => 15, 'flavor_profile' => 'savoury', 'spice_level' => 'mild',
+    ]);
+    MenuItem::factory()->create(['protein_type' => 'beef', 'price' => 12]);
+    MenuItem::factory()->create(['protein_type' => 'chicken', 'price' => 25]);
+    MenuItem::factory()->unavailable()->create(['protein_type' => 'chicken']);
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'mild creamy chicken up to RM20'])
+        ->assertOk()
+        ->assertViewHas('recommendations', fn ($items): bool => $items->pluck('id')->all() === [$creamy->id, $mild->id]);
+});
+
+test('conversational menu requests do not create unsupported leftovers', function (string $text) {
+    $item = MenuItem::factory()->create();
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => $text])
+        ->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->pluck('id')->all() === [$item->id]);
+})->with([
+    'what is good on the menu',
+    'tolong bagi apa-apa makanan sedap sahaja lah',
+    'berikan senarai pilihan menu yang famous dan lazat',
+    'overall any menu will do',
+]);
+
+test('culinary styles and Malay category names select actual catalog dishes', function (string $text, string $slug) {
+    $this->seed(DatabaseSeeder::class);
+    config(['ai.driver' => 'mock']);
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => $text])
+        ->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->pluck('slug')->contains($slug));
+})->with([
+    ['ayam bakar creamy bawah rm20', 'ayam-percik'],
+    ['ayam panggang berkrim bawah rm20', 'ayam-percik'],
+    ['ayam goreng bawah rm20', 'ayam-goreng-berempah'],
+    ['pencuci mulut berkrim', 'cendol'],
+    ['minuman manis', 'teh-tarik'],
+    ['menu nasi bawah rm20', 'nasi-lemak'],
+    ['menu sup daging bawah rm20', 'sup-daging'],
+    ['Nasi Lemak', 'nasi-lemak'],
+    ['Nasi Lemak creamy', 'nasi-lemak'],
+    ['ayam berempah bawah rm20', 'ayam-goreng-berempah'],
+    ['minuman susu bawah rm5', 'teh-tarik'],
+    ['menu ikan bakar bawah rm20', 'ikan-bakar'],
+]);
+
+test('expanded fillers never erase unsupported allergy medical dietary or budget requests', function (string $text) {
+    MenuItem::factory()->create(['protein_type' => 'chicken', 'flavor_profile' => 'creamy', 'price' => 10]);
+    $this->mock(AiRecommender::class)->shouldNotReceive('recommend');
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => $text])
+        ->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->isEmpty())
+        ->assertSee('role="alert"', false);
+})->with([
+    'cadangkan menu ayam creamy untuk diabetes',
+    'menu ayam halal yang sedap',
+    'menu ayam bawah rm20 allergic to garlic',
+    'menu ayam bawah rm20 allergic to milk and garlic',
+    'nak ayam tak creamy bawah rm20',
+    'nak ayam bawah rm',
+    'menu ayam atas rm20',
+    'menu unicorn bawah rm20',
+    'menu noodles bawah rm20',
+    'menu sotong bawah rm20',
+    'ayam bawah rm20.999 dan creamy',
+    'menu kaya bawah rm20',
+    'menu keju bawah rm20',
+    'cadangkan menu ayam alergi santan',
+]);
+
+test('explicit fish requests cannot fall back to prawns', function () {
+    config(['ai.driver' => 'mock']);
+    $fish = MenuItem::factory()->create([
+        'name' => 'Ikan Bakar', 'description' => 'Grilled fish.', 'protein_type' => 'seafood',
+    ]);
+    MenuItem::factory()->create([
+        'name' => 'Udang', 'description' => 'Prawns.', 'protein_type' => 'seafood',
+    ]);
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'menu ikan creamy'])
+        ->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->pluck('id')->all() === [$fish->id]);
+});
+
+test('a named category never degrades into generic menu filler when it is unavailable', function (string $state) {
+    MenuItem::factory()->for(MenuCategory::factory()->create(['slug' => 'appetizers', 'name' => 'Appetizers']), 'category')->create();
+    if ($state !== 'missing') {
+        $category = MenuCategory::factory()->create([
+            'slug' => 'beverages', 'name' => 'Beverages', 'is_active' => $state !== 'inactive',
+        ]);
+        MenuItem::factory()->for($category, 'category')->create(['is_available' => $state !== 'unavailable']);
+    }
+    $this->mock(AiRecommender::class)->shouldNotReceive('recommend');
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'menu minuman berkrim'])
+        ->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->isEmpty());
+})->with(['missing', 'inactive', 'unavailable']);
+
+test('OpenAI receives culinary ranking context only for the hard-valid soft-fallback pool', function () {
+    $item = MenuItem::factory()->create([
+        'name' => 'Ayam Percik', 'description' => 'Grilled chicken with spiced coconut sauce',
+        'protein_type' => 'chicken', 'flavor_profile' => 'creamy', 'spice_level' => 'none', 'price' => 18,
+    ]);
+    MenuItem::factory()->create(['protein_type' => 'chicken', 'price' => 25]);
+    $history = [];
+    fakeRasaOpenAiHttp([new Response(200, ['Content-Type' => 'application/json'], json_encode(CreateResponse::fake([
+        'choices' => [['message' => ['content' => json_encode(['recommended_item_ids' => [$item->id]])]]],
+    ])->toArray()))], $history);
+
+    $this->post(route('ai.recommendations.recommend'), ['preferences_text' => 'mild creamy ayam bawah rm20'])
+        ->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->pluck('id')->all() === [$item->id]);
+
+    expect($history)->toHaveCount(1);
+    $body = json_decode((string) $history[0]['request']->getBody(), true, flags: JSON_THROW_ON_ERROR);
+    $payload = json_decode($body['messages'][1]['content'], true, flags: JSON_THROW_ON_ERROR);
+    expect(array_column($payload['candidates'], 'id'))->toBe([$item->id]);
+    expect($payload['culinary_matches'][0]['traits'])->toContain('creamy', 'grilled', 'spiced');
+    expect($payload['culinary_matches'][0]['matched_preferences'])->toBe(1);
+});
+
+test('soft fallback cannot cross allergen category or dietary hard constraints', function () {
+    config(['ai.driver' => 'mock']);
+    $category = MenuCategory::factory()->create(['name' => 'Desserts', 'slug' => 'desserts']);
+    $eligible = MenuItem::factory()->for($category, 'category')->create([
+        'name' => 'Plain sweet rice', 'description' => 'Rice and sugar.', 'dietary_type' => 'vegetarian',
+        'flavor_profile' => 'sweet', 'price' => 10,
+    ]);
+    MenuItem::factory()->for($category, 'category')->create([
+        'name' => 'Milk dessert', 'description' => 'Milk and sugar.', 'dietary_type' => 'vegetarian', 'price' => 10,
+    ]);
+    MenuItem::factory()->for($category, 'category')->create([
+        'name' => 'No dietary label', 'dietary_type' => null, 'price' => 10,
+    ]);
+    MenuItem::factory()->create(['dietary_type' => 'vegetarian', 'price' => 10, 'flavor_profile' => 'tangy']);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $unreviewed = MenuItem::factory()->for($category, 'category')->create([
+        'name' => 'Recipe under review', 'dietary_type' => 'vegetarian', 'price' => 10,
+    ]);
+    $service = app(MenuAllergenAssessmentService::class);
+    $service->save($unreviewed, Allergen::where('code', 'milk')->firstOrFail(), $admin, [
+        'recipe_status' => 'unknown', 'cross_contact_status' => 'unknown',
+        'evidence' => 'Synthetic fallback safety regression.',
+        'context' => $service->context($unreviewed, null),
+    ]);
+
+    $this->post(route('ai.recommendations.recommend'), [
+        'preferences_text' => 'vegetarian tangy desserts up to RM20', 'excluded_allergens' => ['milk'],
+    ])->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->pluck('id')->all() === [$eligible->id]);
+});
+
+test('selected allergens do not turn a negated cooking preference into a positive one', function () {
+    MenuItem::factory()->create([
+        'name' => 'Fried Chicken', 'description' => 'Chicken fried with garden herbs.', 'protein_type' => 'chicken',
+    ]);
+    $this->mock(AiRecommender::class)->shouldNotReceive('recommend');
+
+    $this->post(route('ai.recommendations.recommend'), [
+        'preferences_text' => 'no fried chicken menu', 'excluded_allergens' => ['milk'],
+    ])->assertOk()->assertViewHas('recommendations', fn ($items): bool => $items->isEmpty());
+});
+
 /** @param array<int, mixed> $responses */
 function fakeRasaOpenAiHttp(array $responses, array &$history): void
 {

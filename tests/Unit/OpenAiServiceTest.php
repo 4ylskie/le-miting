@@ -72,3 +72,18 @@ test('OpenAI cannot return more than three candidates even if configuration is r
     expect((new OpenAiService)->recommend(array_map(openAiMenuItem(...), [1, 2, 3, 4]), []))
         ->toBe([4, 2, 1]);
 });
+
+test('OpenAI cannot return candidates outside hard price and protein constraints during taste fallback', function () {
+    OpenAI::fake([CreateResponse::fake([
+        'choices' => [['message' => ['content' => '{"recommended_item_ids":[2,3,1]}']]],
+    ])]);
+    $items = [
+        [...openAiMenuItem(1), 'protein_type' => 'chicken', 'flavor_profile' => 'creamy', 'price' => 18],
+        [...openAiMenuItem(2), 'protein_type' => 'chicken', 'price' => 25],
+        [...openAiMenuItem(3), 'protein_type' => 'seafood', 'price' => 15],
+    ];
+
+    expect((new OpenAiService)->recommend($items, [
+        'protein_type' => 'chicken', 'max_price' => 20, 'spice_level' => 'mild', 'flavor_profile' => 'creamy',
+    ]))->toBe([1]);
+});

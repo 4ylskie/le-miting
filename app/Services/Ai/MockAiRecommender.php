@@ -6,28 +6,12 @@ class MockAiRecommender implements AiRecommender
 {
     public function recommend(array $items, array $preferences): array
     {
-        return collect($items)
-            ->filter(function (array $item) use ($preferences): bool {
-                foreach (['category', ...array_keys(AiRecommendationOptions::VALUES)] as $field) {
-                    $preference = $preferences[$field] ?? null;
+        $options = new AiRecommendationOptions;
+        $eligible = collect($items)->filter(fn (array $item): bool => $options->matchesHardPreferences($item, $preferences));
+        $level = $eligible->max(fn (array $item): int => $options->softMatchLevel($item, $preferences)) ?? 0;
 
-                    if ($preference !== null && $preference !== '' && ($item[$field] ?? null) !== $preference) {
-                        return false;
-                    }
-                }
-
-                if (isset($preferences['spice_levels'])
-                    && ! in_array($item['spice_level'] ?? null, $preferences['spice_levels'], true)) {
-                    return false;
-                }
-
-                if (isset($preferences['excluded_protein_types'])
-                    && (! isset($item['protein_type']) || in_array($item['protein_type'], $preferences['excluded_protein_types'], true))) {
-                    return false;
-                }
-
-                return true;
-            })
+        return $eligible
+            ->filter(fn (array $item): bool => $options->softMatchLevel($item, $preferences) >= $level)
             ->sort(function (array $left, array $right) use ($preferences): int {
                 $score = $this->relevanceScore($right, $preferences) <=> $this->relevanceScore($left, $preferences);
 
@@ -41,7 +25,7 @@ class MockAiRecommender implements AiRecommender
     }
 
     /**
-     * Text cues rank candidates only after structured menu attributes have constrained them.
+     * Text cues rank candidates only after hard eligibility and preferred soft matches.
      *
      * @param  array<string, mixed>  $preferences
      */
@@ -50,9 +34,20 @@ class MockAiRecommender implements AiRecommender
         $text = (string) ($preferences['preferences_text'] ?? '');
         $normalizedText = $this->normalizePhrase($text);
         $normalizedName = $this->normalizePhrase((string) ($item['name'] ?? ''));
-        $score = $normalizedName !== '' && str_contains(' '.$normalizedText.' ', ' '.$normalizedName.' ')
-            ? 1000
-            : 0;
+        $score = (new AiRecommendationOptions)->softMatchCount($item, $preferences) * 100;
+        if ($normalizedName !== '' && str_contains(' '.$normalizedText.' ', ' '.$normalizedName.' ')) {
+            $score += 1000;
+        }
+
+        if (($preferences['flavor_profile'] ?? null) === 'creamy'
+            && ! isset($preferences['spice_level']) && ! isset($preferences['spice_levels'])) {
+            $score += match ($item['spice_level'] ?? null) {
+                'none' => 3,
+                'mild' => 2,
+                'medium' => 1,
+                default => 0,
+            };
+        }
 
         $spicyIntent = isset($preferences['spice_levels'])
             || in_array($preferences['spice_level'] ?? null, ['medium', 'hot'], true)

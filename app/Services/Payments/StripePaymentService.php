@@ -15,6 +15,8 @@ class StripePaymentService implements PaymentProcessor
 {
     private const SESSIONS_URL = 'https://api.stripe.com/v1/checkout/sessions';
 
+    private const API_VERSION = '2026-10-28.endive';
+
     public function __construct(private PaymentApplier $applier, private MockPaymentService $simulator) {}
 
     public function prepare(Payment $payment): array
@@ -35,7 +37,7 @@ class StripePaymentService implements PaymentProcessor
                 ->withHeaders(['Idempotency-Key' => 'checkout-'.$payment->provider_reference])
                 ->post(self::SESSIONS_URL, [
                     'mode' => 'payment',
-                    'payment_method_types' => ['card'],
+                    'allowed_payment_method_types' => ['card'],
                     'currency' => 'myr',
                     'client_reference_id' => $payment->provider_reference,
                     'metadata' => [
@@ -68,8 +70,17 @@ class StripePaymentService implements PaymentProcessor
             $payment->update(['provider' => 'stripe', 'raw_response' => ['session_id' => $session['id']]]);
 
             return ['url' => $session['url']];
-        } catch (ConnectionException|RequestException|RuntimeException) {
-            Log::warning('Stripe Checkout could not be started.');
+        } catch (ConnectionException|RequestException|RuntimeException $exception) {
+            $parameter = $exception instanceof RequestException ? $exception->response->json('error.param') : null;
+            Log::warning('Stripe Checkout could not be started.', [
+                'payment_id' => $payment->id,
+                'failure_type' => $exception::class,
+                'http_status' => $exception instanceof RequestException ? $exception->response->status() : null,
+                'stripe_parameter' => in_array($parameter, [
+                    'mode', 'allowed_payment_method_types', 'payment_method_types', 'currency',
+                    'line_items', 'metadata', 'client_reference_id', 'success_url', 'cancel_url',
+                ], true) ? $parameter : null,
+            ]);
             $this->applier->applyFailedPayment(['reference' => $payment->provider_reference, 'provider' => 'stripe']);
 
             return ['url' => route('payment.failed', $payment)];
@@ -130,6 +141,7 @@ class StripePaymentService implements PaymentProcessor
     private function client(): PendingRequest
     {
         return Http::withToken((string) config('services.stripe.secret'))
+            ->withHeaders(['Stripe-Version' => self::API_VERSION])
             ->acceptJson()->connectTimeout(3)->timeout(10);
     }
 
